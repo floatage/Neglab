@@ -2,6 +2,33 @@
     <qresource prefix="/">
         <file>main.qml</file>
         <file>MainForm.ui.qml</file>
+        <file>EeglabTitle.qml</file>
+        <file>IconGroup.qml</file>
+        <file>img/bluetooth.png</file>
+        <file>img/close.png</file>
+        <file>img/creat.png</file>
+        <file>img/logo.png</file>
+        <file>img/max.png</file>
+        <file>img/min.png</file>
+        <file>img/open.png</file>
+        <file>img/pause.png</file>
+        <file>img/save.png</file>
+        <file>img/setting.png</file>
+        <file>img/start.png</file>
+        <file>img/stop.png</file>
+        <file>img/style.png</file>
+        <file>img/userinfor.png</file>
+        <file>NormalButton.qml</file>
+        <file>NormalCheckbox.qml</file>
+        <file>NormalRadioButton.qml</file>
+        <file>TextRow.qml</file>
+        <file>OptionalTextRow.qml</file>
+        <file>SliderRow.qml</file>
+        <file>GeneralSettingPanel.qml</file>
+        <file>GatherInforPanel.qml</file>
+        <file>img/extra.png</file>
+        <file>ComboBoxRow.qml</file>
+        <file>img/arrow-down.png</file>
+        <file>TextAreaRow.qml</file>
     </qresource>
 </RCC>
-
