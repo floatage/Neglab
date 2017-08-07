@@ -11,7 +11,7 @@ Item {
     property real fillWidth: 30
     property real fillHeight: 18
     property real buttonTextSize: 12
-    property color buttonTextColor: "#169BD5"
+    property color buttonTextColor: "#333"
     property bool hasBorder: true
     property alias buttonAction: sourceButton.action
 
@@ -42,8 +42,7 @@ Item {
 
                     implicitWidth: textInfor.contentWidth + fillWidth
                     implicitHeight: textInfor.contentHeight + fillHeight
-                    radius: 10
-                    border.color: control.pressed ? "#6FF" : "#6CF"
+                    border.color: control.pressed ? "#6CF" : "#E4E4E4"
                     border.width: hasBorder ? (control.pressed ? 2 : 1) : 0
                     color: control.hovered ? buttonTextColor : "#FFF"
                 }

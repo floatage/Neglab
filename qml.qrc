@@ -29,6 +29,6 @@
         <file>img/extra.png</file>
         <file>ComboBoxRow.qml</file>
         <file>img/arrow-down.png</file>
-        <file>TextAreaRow.qml</file>
+        <file>DeviceTestWindow.qml</file>
     </qresource>
 </RCC>

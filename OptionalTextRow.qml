@@ -35,7 +35,7 @@ Item {
                 background: Rectangle {
                       implicitWidth: textWidth
                       implicitHeight: 25
-                      border.color: "#E4E4E4"
+                      border.color: control.activeFocus ? "#6CF" : "#E4E4E4"
                       border.width: 1
                 }
             }

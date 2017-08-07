@@ -151,6 +151,7 @@ Rectangle {
         id: mouseArea
         anchors.fill: parent
         acceptedButtons: Qt.LeftButton
+        propagateComposedEvents: true
 
         onDoubleClicked: {
             Qt.quit();

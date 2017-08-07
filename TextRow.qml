@@ -12,6 +12,7 @@ Item {
     property alias tPlaceholderText: rowTextField.placeholderText
     property color textColor: "#333"
     property real tWidth: 120
+    property real tHeight: 25
     property bool hasButton: false
     property string bButtonText: "default"
     property string value: rowTextField.text
@@ -47,8 +48,8 @@ Item {
                 textColor: textColor
                 background: Rectangle {
                       implicitWidth: tWidth - (hasButton ? textRowCotent.rowButton.width : 0)
-                      implicitHeight: 25
-                      border.color: "#E4E4E4"
+                      implicitHeight: tHeight
+                      border.color: control.activeFocus ? "#6CF" : "#E4E4E4"
                       border.width: 1
                 }
             }

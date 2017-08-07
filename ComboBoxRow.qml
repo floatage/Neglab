@@ -12,6 +12,7 @@ Item {
     property alias rowWidth: rowContent.width
     property alias rowHeight: rowContent.height
     property real comboBoxWidth: 120
+    property real comboBoxHeight: 25
     property color labelTextColor: "#333"
 
     Rectangle{
@@ -30,7 +31,7 @@ Item {
         ComboBox{
             id: rowComobox
             width: comboBoxWidth
-            height: 25
+            height: comboBoxHeight
             anchors.verticalCenter: parent.verticalCenter
             anchors.left: rowLabel.right
             anchors.leftMargin: 10
@@ -79,7 +80,7 @@ Item {
                         }
 
                         itemDelegate.background: Rectangle {  // selection of an item
-                            height: 25
+                            height: comboBoxHeight
                             color: styleData.selected ? "#EBEBEB" : "#FFFFFF"
                         }
 

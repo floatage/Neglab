@@ -42,7 +42,7 @@ Item {
                     }
                     handle: Rectangle {
                         anchors.centerIn: parent
-                        color: control.pressed ? "#6CF" : "#74CFFA"
+                        color: control.pressed ? "#6BF" : "#74CFFA"
                         implicitWidth: 15
                         implicitHeight: 15
                         radius: 7.5

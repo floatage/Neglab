@@ -125,7 +125,7 @@ Window {
                 OptionalTextRow{
                     rowWidth: parent.width
                     rowHeight: parent.height
-                    checkboxText: "低通滤波"
+                    checkboxText: "低通滤波";
                     placeholderText: "30.00"
                     textWidth: parent.width * 0.6
                 }
@@ -225,7 +225,7 @@ Window {
         }
     }
 
-    GatherInforPanel{
+    DeviceTestWindow{
         id:daw
         anchors.bottom: mainWindow.bottom
     }
