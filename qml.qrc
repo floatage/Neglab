@@ -30,5 +30,7 @@
         <file>ComboBoxRow.qml</file>
         <file>img/arrow-down.png</file>
         <file>DeviceTestWindow.qml</file>
+        <file>PlotControlPanel.qml</file>
+        <file>PlotPanel.qml</file>
     </qresource>
 </RCC>

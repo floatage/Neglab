@@ -35,7 +35,7 @@ Rectangle{
                 TextRow{
                     rowText: "索引："
                     tWidth: 174
-                    tPlaceholderText: "请输入..";
+                    tPlaceholderText: "请输入.."
                 }
 
                 Rectangle{
