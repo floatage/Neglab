@@ -13,7 +13,7 @@ Item {
     property real buttonTextSize: 12
     property color buttonTextColor: "#333"
     property bool hasBorder: true
-    property alias buttonAction: sourceButton.action
+    property alias button: sourceButton
 
     Button{
         id: sourceButton

@@ -1,4 +1,5 @@
 import QtQuick 2.0
+import QtQuick.Controls 1.3
 
 Rectangle{
     id: deviceTestDialog
@@ -142,6 +143,43 @@ Rectangle{
                     height: parent.height * 0.6
                     border.width: 1
                     border.color: "#6FF"
+
+                    ScrollView{
+                        width: parent.width * 0.98
+                        height: parent.height * 0.96
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.right: parent.right
+                        anchors.rightMargin: parent.width * 0.005
+
+                        ListView{
+                            id: deviceMsgListView
+                            spacing: 3
+                            delegate: Text {
+                                text: showData
+                            }
+                            model: ListModel{
+                            }
+                        }
+                    }
+
+                    Connections{
+                        target: DeviceTestManager
+                        onDeviceReadyRead: {
+                            deviceMsgListView.model.append({showData:readData})
+                            if (deviceMsgListView.model.count === 100){
+                                deviceMsgListView.model.clear()
+                            }
+
+
+                            var deviceNumStr = readData.match("NAME-#[0-9]+-")
+                            if (deviceNumStr !== null)
+                            {
+                                deviceNumStr = "" + deviceNumStr
+                                deviceListCombox.comboxModel.append({deviceNum:'#' + deviceNumStr.match("[0-9]+")})
+                                deviceListCombox.comboxCurrentIndex = 0
+                            }
+                        }
+                    }
                 }
 
                 Rectangle{
@@ -149,6 +187,7 @@ Rectangle{
                     height: parent.height * 0.18
 
                     TextRow{
+                        id: deviceSendMsgTextrow
                         tWidth: parent.width
                         tHeight: parent.height
                         tPlaceholderText: "请输入.."
@@ -168,20 +207,29 @@ Rectangle{
                             id: deviceSearchButton
                             buttonText: "搜 索"
                             anchors.bottom: parent.bottom
+
+                            Connections{
+                                target: deviceSearchButton.button
+                                onClicked: {
+                                    DeviceTestManager.searchDevice()
+                                }
+                            }
                         }
 
                         Rectangle{
-                            id: deviceListCombox
+                            id: deviceListComboxRow
                             width: 90
                             height: parent.height
                             anchors.verticalCenter: parent.verticalCenter
 
                             ComboBoxRow{
+                                id: deviceListCombox
                                 width: 90
                                 height: 30
                                 comboBoxWidth: 90
                                 comboBoxHeight: 30
-                                comboxModel: ['COM2', 'COM3', 'COM4']
+                                comboxModel:  ListModel{
+                                }
                                 anchors.bottom: parent.bottom
                                 anchors.left: parent.left
                                 anchors.leftMargin: -10
@@ -192,12 +240,31 @@ Rectangle{
                             id: deviceConnectButton
                             buttonText: "连 接"
                             anchors.bottom: parent.bottom
+
+                            Connections{
+                                target: deviceConnectButton.button
+                                onClicked: {
+                                    var deviceNum = deviceListCombox.comboxCurrentText
+                                    if (deviceListCombox.comboxCurrentText !== ""){
+                                        DeviceTestManager.connectDevice(deviceNum.substring(1, deviceNum.length))
+//                                        console.log(deviceNum.substring(1, deviceNum.length))
+                                    }
+                                }
+                            }
                         }
 
                         NormalButton{
                             id: deviceDisconnectButton
                             buttonText: "断 开"
-                            anchors.bottom: parent.bottom
+                            anchors.bottom: parent.bottom.item
+                            Connections{
+                                target: deviceDisconnectButton.button
+                                onClicked: {
+                                    DeviceTestManager.disconnectPort()
+                                    deviceListCombox.comboxModel.clear()
+                                    deviceListCombox.comboxCurrentIndex = -1
+                                }
+                            }
                         }
                     }
 
@@ -206,6 +273,16 @@ Rectangle{
                         anchors.right: parent.right
                         anchors.bottom: parent.bottom
                         buttonText: "发 送"
+
+                        Connections{
+                            target: msgSendButton.button
+                            onClicked: {
+                                if (deviceSendMsgTextrow.rowValue !== ""){
+                                    DeviceTestManager.sendDataToPort(deviceSendMsgTextrow.rowValue)
+                                    deviceMsgListView.model.append({showData:"SEND: " + deviceSendMsgTextrow.rowValue})
+                                }
+                            }
+                        }
                     }
                 }
             }

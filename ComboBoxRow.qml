@@ -8,9 +8,11 @@ Item {
     height: rowContent.height
 
     property alias comboxModel: rowComobox.model
+    property alias comboxCurrentIndex: rowComobox.currentIndex
     property alias labelText: rowLabel.text
     property alias rowWidth: rowContent.width
     property alias rowHeight: rowContent.height
+    property alias comboxCurrentText: rowComobox.currentText
     property real comboBoxWidth: 120
     property real comboBoxHeight: 25
     property color labelTextColor: "#333"

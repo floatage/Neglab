@@ -7,6 +7,7 @@ Item {
     width: textRowCotent.width
     height: textRowCotent.height
 
+    property alias rowValue: rowTextField.text
     property alias rowText: rowLabel.text
     property alias rSpacing: textRowCotent.spacing
     property alias tPlaceholderText: rowTextField.placeholderText
