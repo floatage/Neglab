@@ -10,7 +10,7 @@ Item {
     property alias checkboxText: sourceCheckbox.cText
     property color textColor: "#333"
     property real cSpacing: 12
-    property bool isChecked: sourceCheckbox.checked
+    property alias isChecked: sourceCheckbox.checked
     property alias cExclusiveGroup: sourceCheckbox.exclusiveGroup
 
     CheckBox{

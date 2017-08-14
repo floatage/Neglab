@@ -8,6 +8,10 @@ Rectangle{
     property Component floatComponent: null
     property var floatInstance: null
 
+    //0: ready  1: ploting  2: pause  3: finished
+    property int plotStatus: 0
+    property var gatherInfor: null
+
     Component {
         id: iconItem
 
@@ -157,16 +161,30 @@ Rectangle{
                         item.imgSource = "/img/start.png"
                         item.imgScale = 0.85
                     }
-                }
 
-                Loader {
-                    id: devicePauseIcon
-                    sourceComponent: iconItem
-                    onLoaded: {
-                        item.imgSource = "/img/pause.png"
-                        item.imgScale = 0.85
+                    Connections{
+                        target: deviceStartIcon.item
+                        onIconClicked: {
+                            if (plotPanel.plotStatus === 0 || plotPanel.plotStatus === 2){
+                                plotPanel.plotStatus = 1
+                                deviceStartIcon.item.imgSource = "/img/pause.png"
+                            }
+                            else if(plotPanel.plotStatus == 1){
+                                plotPanel.plotStatus = 2
+                                deviceStartIcon.item.imgSource = "/img/start.png"
+                            }
+                        }
                     }
                 }
+
+//                Loader {
+//                    id: devicePauseIcon
+//                    sourceComponent: iconItem
+//                    onLoaded: {
+//                        item.imgSource = "/img/pause.png"
+//                        item.imgScale = 0.85
+//                    }
+//                }
 
                 Loader {
                     id: deviceStopIcon

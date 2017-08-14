@@ -11,12 +11,13 @@ Item {
     property alias rowText: rowLabel.text
     property alias rSpacing: textRowCotent.spacing
     property alias tPlaceholderText: rowTextField.placeholderText
+    property bool isReadOnly: false
     property color textColor: "#333"
     property real tWidth: 120
     property real tHeight: 25
     property bool hasButton: false
     property string bButtonText: "default"
-    property string value: rowTextField.text
+//    property string value: rowTextField.text
     property string unitText: ''
     property var inputValidator: DoubleValidator{decimals:2}
     property real controlSpacing: 10
@@ -48,6 +49,7 @@ Item {
             id: rowTextField
             anchors.verticalCenter: rowLabel.verticalCenter
             validator: textRow.inputValidator
+            readOnly: textRow.isReadOnly
 
             style:TextFieldStyle{
                 font: rowLabel.font

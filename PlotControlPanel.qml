@@ -27,7 +27,10 @@ Rectangle{
                 text: "显示模式"
             }
 
-            ExclusiveGroup { id: plotModeGroup }
+            ExclusiveGroup {
+                id: plotModeGroup
+            }
+
             NormalCheckbox{
                 id: plotModeContrast
                 anchors.left: plotModeRowLabel.right
@@ -44,6 +47,7 @@ Rectangle{
                 anchors.verticalCenter: parent.verticalCenter
                 checkboxText: "分离"
                 cExclusiveGroup: plotModeGroup
+                isChecked: true
             }
         }
 
