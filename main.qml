@@ -13,6 +13,14 @@ Window {
     property color textColor: "#333"
     property string textFontFamily: "宋体"
     property int textFontPixelSize: 12
+    property Component independentComponent: null
+    property var independentInstance: null
+    property Component floatComponent: null
+    property var floatInstance: null
+
+    function independentInstanceDestory(){
+        independentInstance.destroy()
+    }
 
     EeglabTitle{
         id: mainTitle
@@ -28,15 +36,11 @@ Window {
 
     PlotPanel{
         id: plotPanel
+        parentRef: mainWindow
         width: parent.width - plotControlPanel.width
         height: parent.height - mainTitle.height
         anchors.left: plotControlPanel.right
         anchors.top: mainTitle.bottom
-    }
-
-    DeviceTestWindow{
-        id:daw
-        anchors.bottom: mainWindow.bottom
     }
 }
 

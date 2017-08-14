@@ -6,6 +6,53 @@ Rectangle{
     width: 510
     height: 315
 
+    property var target: null
+
+    Component {
+        id: iconItem
+
+        Rectangle{
+            id: iconRect
+            width: iconLen
+            height: iconLen
+            color: titleArea.color
+
+            property real iconLen : 20
+            property string imgSource
+            property real imgScale: 1.0
+
+            signal iconClicked()
+
+            Image {
+                id:iconPic
+                source: imgSource
+                scale: imgScale
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.left: parent.left
+
+                property var mask: null
+
+                MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    acceptedButtons: Qt.LeftButton
+                    onClicked: iconRect.iconClicked()
+
+                    onHoveredChanged: {
+                        if (iconPic.mask === null){
+                            iconPic.mask = Qt.createQmlObject(
+                                        'import QtGraphicalEffects 1.0;ColorOverlay{anchors.fill:iconPic;source:iconPic;color:"#FFF"}',
+                                        iconRect, "")
+                        }
+                        else{
+                            iconPic.mask.destroy()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     Rectangle {
         id: deviceTestTitleArea
         width: parent.width
@@ -50,46 +97,70 @@ Rectangle{
                 anchors.right: parent.right
                 color: parent.color
 
-                Rectangle {
-                    id:minIcon
-                    width: parent.width * 0.2
-                    anchors.left: parent.left
-                    anchors.verticalCenter: parent.verticalCenter
-
-                    Image {
-                        anchors.verticalCenter: parent.verticalCenter
-                        source: "/img/min.png"
-                        scale: 0.875
-                    }
-                }
-
-                Rectangle {
-                    id: maxIcon
-                    width: parent.width * 0.2
-                    anchors.left: minIcon.right
-                    anchors.leftMargin: parent.width * 0.2
-                    anchors.verticalCenter: parent.verticalCenter
-
-                    Image {
-                        anchors.verticalCenter: parent.verticalCenter
-                        source: "/img/max.png"
-                        scale: 0.875
-                    }
-                }
-
-                Rectangle {
+                Loader {
                     id: closeIcon
-                    width: parent.width * 0.2
-                    anchors.left:maxIcon.right
-                    anchors.leftMargin: parent.width * 0.2
+                    anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
+                    sourceComponent: iconItem
+                    onLoaded: {
+                        item.imgSource = "/img/close.png"
+                        item.imgScale = 0.9
+                    }
 
-                    Image {
-                        anchors.verticalCenter: parent.verticalCenter
-                        source: "/img/close.png"
-                        scale: 0.875
+                    Connections{
+                        target: closeIcon.item
+                        onIconClicked: {
+                            DeviceTestManager.disconnectPort()
+                            deviceTestDialog.target.independentInstanceDestory()
+                        }
                     }
                 }
+
+//                Row{
+//                    anchors.centerIn: parent
+//                    spacing: windowControlIconGroup.width * 0.2
+
+//                    Loader {
+//                        id: minIcon
+//                        sourceComponent: iconItem
+//                        onLoaded: {
+//                            item.imgSource = "/img/min.png"
+//                            item.imgScale = 0.875
+//                        }
+
+//                        Connections{
+//                            target: minIcon.item
+//                            onIconClicked: {
+//                                console.log('daw')
+//                            }
+//                        }
+//                    }
+
+//                    Loader {
+//                        id: maxIcon
+//                        sourceComponent: iconItem
+//                        onLoaded: {
+//                            item.imgSource = "/img/max.png"
+//                            item.imgScale = 0.875
+//                        }
+//                    }
+
+//                    Loader {
+//                        id: closeIcon
+//                        sourceComponent: iconItem
+//                        onLoaded: {
+//                            item.imgSource = "/img/close.png"
+//                            item.imgScale = 0.875
+//                        }
+
+//                        Connections{
+//                            target: closeIcon.item
+//                            onIconClicked: {
+//                                deviceTestDialog.target.independentInstanceDestory()
+//                            }
+//                        }
+//                    }
+//                }
             }
         }
 
@@ -166,6 +237,7 @@ Rectangle{
                         target: DeviceTestManager
                         onDeviceReadyRead: {
                             deviceMsgListView.model.append({showData:readData})
+                            deviceMsgListView.currentIndex = deviceMsgListView.model.count - 1
                             if (deviceMsgListView.model.count === 100){
                                 deviceMsgListView.model.clear()
                             }

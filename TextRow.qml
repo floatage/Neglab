@@ -17,10 +17,13 @@ Item {
     property bool hasButton: false
     property string bButtonText: "default"
     property string value: rowTextField.text
+    property string unitText: ''
+    property var inputValidator: DoubleValidator{decimals:2}
+    property real controlSpacing: 10
 
     Row{
         id: textRowCotent
-        spacing: 10
+        spacing: controlSpacing
 
         property var rowButton: null
 
@@ -34,7 +37,7 @@ Item {
             Component.onCompleted: {
                 if (hasButton){
                     var obj = Qt.createComponent("NormalButton.qml");
-                    textRowCotent.rowButton = obj.createObject(textRowCotent, {buttonText:bButtonText,hasBorder: false,fillHeight: 0,fillWidth:0})
+                    textRowCotent.rowButton = obj.createObject(textRowCotent, {buttonRadius:10,buttonText:bButtonText,hasBorder: false,fillHeight: 0,fillWidth:0})
                     textRowCotent.rowButton.anchors.verticalCenter =  rowLabel.verticalCenter
                     textRowCotent.spacing = 7
                 }
@@ -44,6 +47,8 @@ Item {
         TextField{
             id: rowTextField
             anchors.verticalCenter: rowLabel.verticalCenter
+            validator: textRow.inputValidator
+
             style:TextFieldStyle{
                 font: rowLabel.font
                 textColor: textColor
@@ -54,6 +59,15 @@ Item {
                       border.width: 1
                 }
             }
+        }
+
+        Label{
+            id: rowTextUint
+            font.family:"宋体"
+            font.pixelSize:12
+            color: "#666"
+            text: textRow.unitText
+            anchors.verticalCenter: parent.verticalCenter
         }
     }
 }

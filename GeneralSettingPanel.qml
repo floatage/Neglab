@@ -5,7 +5,9 @@ import QtQuick.Controls.Styles 1.3
 
 Rectangle{
     width: 510
-    height: 129
+    height: 105
+
+    property var parentRef: null
 
 //        Image {
 //            id: generalSettingExtra
@@ -20,8 +22,8 @@ Rectangle{
         height: parent.height
 //            anchors.top: generalSettingExtra.bottom
 
-        border.width: 1
-        border.color: "#6FF"
+//        border.width: 1
+//        border.color: "#6FF"
 
         Rectangle{
             id: generalContentPanel
@@ -30,43 +32,117 @@ Rectangle{
             anchors.left: parent.left
             anchors.leftMargin: parent.width * 0.04
             anchors.top: parent.top
-            anchors.topMargin: parent.height * 0.17
+            anchors.topMargin: parent.height * 0.13
 
-            Rectangle{
-                id: filePathRow
-                width: parent.width * 0.45
-                height: 30
-                anchors.verticalCenter: parent.verticalCenter
+            Column{
+                width: parent.width
+                height: parent.height
+                spacing: 10
 
-                TextRow{
-                    rowText: "存储路径："
-                    tPlaceholderText: "/C/test";
-                    tWidth: 152
-                    hasButton: true
-                    bButtonText: "选择"
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-            }
-
-            Rectangle{
-                id: fileTypeRow
-                width: parent.width * 0.45
-                height: 30
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.left:filePathRow.right
-                anchors.leftMargin: parent.width * 0.08
-
-                ComboBoxRow{
+                Rectangle{
                     width: parent.width
-                    height: parent.height
-                    labelText: "文件类型："
-                    comboBoxWidth: parent.width * 0.7
-                    anchors.verticalCenter: parent.verticalCenter
+                    height: 30
 
-                    comboxModel: ['Neg']
+                    Rectangle{
+                        id: filePathRow
+                        width: parent.width * 0.45
+                        height: parent.height
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        TextRow{
+                            rowText: "存储路径："
+                            tPlaceholderText: "/C/test";
+                            tWidth: 152
+                            hasButton: true
+                            bButtonText: "选择"
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+
+                    Rectangle{
+                        id: fileTypeRow
+                        width: parent.width * 0.45
+                        height: parent.height
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.left:filePathRow.right
+                        anchors.leftMargin: parent.width * 0.08
+
+                        ComboBoxRow{
+                            width: parent.width
+                            height: parent.height
+                            labelText: "文件类型："
+                            comboBoxWidth: parent.width * 0.7
+                            anchors.verticalCenter: parent.verticalCenter
+
+                            comboxModel: ['Neg']
+                        }
+                    }
+                }
+
+                Rectangle {
+                    width: parent.width
+                    height: 1
+                    color: "#9FF"
+                }
+
+                Rectangle{
+                    width: parent.width
+                    height: 30
+
+                    NormalButton{
+                        id: settingDefaultButton
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.left: parent.left
+                        buttonText: "恢复默认设置"
+                    }
+
+                    NormalButton{
+                        id: settingSaveButton
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.right: settingCancleButton.left
+                        anchors.rightMargin: 35
+                        buttonText: "保 存"
+                    }
+
+                    NormalButton{
+                        id: settingCancleButton
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.right: parent.right
+                        buttonText: "取 消"
+
+                        Connections{
+                            target: settingCancleButton.button
+                            onClicked: {
+                                if (parentRef.floatInstance !== null)
+                                    parentRef.floatInstance.destroy()
+                            }
+                        }
+                    }
                 }
             }
         }
+    }
+
+    Rectangle {
+        id: settingRightBorder
+        width: 1
+        height: parent.height
+        anchors.right: parent.right
+        color: "#66FFFF"
+    }
+    Rectangle {
+        id: settingLeftBorder
+        width: 1
+        height: parent.height
+        anchors.left: parent.left
+        color: "#66FFFF"
+    }
+    Rectangle {
+        id: settingBottomBorder
+        width: parent.width-2
+        height: 1
+        anchors.bottom: parent.bottom
+        color: "#66FFFF"
     }
 //    DropShadow {
 //        anchors.fill: generalSettingPanel

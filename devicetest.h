@@ -19,6 +19,9 @@ private:
 
     QSerialPort serialPort;
     QString buffer;
+    bool dataTransferIsStart;
+
+    int saveExtractedDataToFile(const QVariant& fileName, char* data);
 
 signals:
     void deviceReadyRead(QVariant readData);
@@ -39,6 +42,14 @@ public:
 
     Q_INVOKABLE void searchDevice(void);
     Q_INVOKABLE bool connectDevice(const QVariant& deviceNum);
+
+    Q_INVOKABLE int startDataTransfer();
+    Q_INVOKABLE int pauseDataTransfer();
+    Q_INVOKABLE int finishDataTransfer();
+    Q_INVOKABLE char* extractRealData();
+
+    Q_INVOKABLE int openDataFile(const QVariant& fileName);
+    Q_INVOKABLE int saveDataToFile(const QVariant& filename);
 };
 
 #endif // DEVICETEST_H

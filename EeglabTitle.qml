@@ -1,4 +1,5 @@
 import QtQuick 2.0
+import QtQuick.Window 2.0
 
 Rectangle {
     id: titleArea
@@ -15,6 +16,52 @@ Rectangle {
 
     Component.onCompleted: {
         titleArea.iconPath = "/img/logo.png"
+    }
+
+    Component {
+        id: iconItem
+
+        Rectangle{
+            id: iconRect
+            width: iconLen
+            height: iconLen
+            color: titleArea.color
+
+            property real iconLen : 20
+            property string imgSource
+            property real imgScale: 1.0
+
+            signal iconClicked()
+
+            Image {
+                id:iconPic
+                source: imgSource
+                scale: imgScale
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.left: parent.left
+
+                property var mask: null
+
+                MouseArea {
+
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    acceptedButtons: Qt.LeftButton
+                    onClicked: iconRect.iconClicked()
+
+                    onHoveredChanged: {
+                        if (iconPic.mask === null){
+                            iconPic.mask = Qt.createQmlObject(
+                                        'import QtGraphicalEffects 1.0;ColorOverlay{anchors.fill:iconPic;source:iconPic;color:"#FFF"}',
+                                        iconRect, "")
+                        }
+                        else{
+                            iconPic.mask.destroy()
+                        }
+                    }
+                }
+            }
+        }
     }
 
     Rectangle{
@@ -45,42 +92,71 @@ Rectangle {
             anchors.rightMargin: parent.width * 0.031
             color: parent.color
 
-            Rectangle {
-                id:bluetoothIcon
-                width: parent.width * 0.2
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
+            Row{
+                anchors.centerIn: parent
+                spacing: toolIconGroup.width * 0.2
 
-                Image {
-                    anchors.verticalCenter: parent.verticalCenter
-                    source: "/img/bluetooth.png"
+                Loader {
+                    id: bluetoothIcon
+                    sourceComponent: iconItem
+                    onLoaded: {
+                        item.imgSource = "/img/bluetooth.png"
+                        item.imgScale = 0.975
+                    }
+
+                    Connections{
+                        target: bluetoothIcon.item
+                        onIconClicked: {
+                            var rootItemComponent = titleArea.target.independentComponent
+                            if(rootItemComponent === null){
+                                rootItemComponent = Qt.createComponent("DeviceTestWindow.qml");
+                            }
+                            if(rootItemComponent.status === Component.Ready) {
+                                var wx = (titleArea.target.width - 510) / 2
+                                var wy = (titleArea.target.height - 315) / 2
+                                titleArea.target.independentInstance = rootItemComponent.createObject(titleArea.target, {"target":titleArea.target, "x":wx, "y":wy});
+                            }
+                        }
+                    }
                 }
-            }
 
-            Rectangle {
-                id: styleIcon
-                width: parent.width * 0.2
-                anchors.left: bluetoothIcon.right
-                anchors.leftMargin: parent.width * 0.2
-                anchors.verticalCenter: parent.verticalCenter
-
-                Image {
-                    anchors.verticalCenter: parent.verticalCenter
-                    source: "/img/style.png"
+                Loader {
+                    id: styleIcon
+                    sourceComponent: iconItem
+                    onLoaded: {
+                        item.imgSource = "/img/style.png"
+                        item.imgScale = 0.975
+                    }
                 }
-            }
 
-            Rectangle {
-                id: settingIcon
-                width: parent.width * 0.2
-                anchors.left:styleIcon.right
-                anchors.leftMargin: parent.width * 0.2
-                anchors.verticalCenter: parent.verticalCenter
+                Loader {
+                    id: settingIcon
+                    sourceComponent: iconItem
+                    onLoaded: {
+                        item.imgSource = "/img/setting.png"
+                        item.imgScale = 0.975
+                    }
 
-                Image {
-                    anchors.verticalCenter: parent.verticalCenter
-                    source: "/img/setting.png"
-                    scale: 0.7
+                    Connections{
+                        target: settingIcon.item
+                        onIconClicked: {
+                            var rootItemComponent = titleArea.target.floatComponent
+                            if(rootItemComponent === null){
+                                rootItemComponent = Qt.createComponent("GeneralSettingPanel.qml")
+                            }
+
+                            if (titleArea.target.floatInstance === null){
+                                if(rootItemComponent.status === Component.Ready) {
+                                    var wx = titleArea.target.width*0.99 - 510
+                                    var wy = titleArea.height
+                                    titleArea.target.floatInstance = rootItemComponent.createObject(titleArea.target, {"parentRef":titleArea.target, "x":wx, "y":wy});
+                                }
+                            }
+                            else{
+                                titleArea.target.floatInstance.destroy()
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -103,41 +179,58 @@ Rectangle {
             anchors.right: parent.right
             color: parent.color
 
-            Rectangle {
-                id:minIcon
-                width: parent.width * 0.2
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
+            Row{
+                anchors.centerIn: parent
+                spacing: windowControlIconGroup.width * 0.2
 
-                Image {
-                    anchors.verticalCenter: parent.verticalCenter
-                    source: "/img/min.png"
+                Loader {
+                    id: minIcon
+                    sourceComponent: iconItem
+                    onLoaded: {
+                        item.imgSource = "/img/min.png"
+                    }
+
+                    Connections{
+                        target: minIcon.item
+                        onIconClicked: {
+                            titleArea.target.visibility = Window.Minimized
+                        }
+                    }
                 }
-            }
 
-            Rectangle {
-                id: maxIcon
-                width: parent.width * 0.2
-                anchors.left: minIcon.right
-                anchors.leftMargin: parent.width * 0.2
-                anchors.verticalCenter: parent.verticalCenter
+                Loader {
+                    id: maxIcon
+                    sourceComponent: iconItem
+                    onLoaded: {
+                        item.imgSource = "/img/max.png"
+                    }
 
-                Image {
-                    anchors.verticalCenter: parent.verticalCenter
-                    source: "/img/max.png"
+                    Connections{
+                        target: maxIcon.item
+                        onIconClicked: {
+                            if (titleArea.target.visibility === Window.Maximized){
+                                titleArea.target.visibility = Window.Windowed
+                            }
+                            else if (titleArea.target.visibility === Window.Windowed){
+                                titleArea.target.visibility = Window.Maximized
+                            }
+                        }
+                    }
                 }
-            }
 
-            Rectangle {
-                id: closeIcon
-                width: parent.width * 0.2
-                anchors.left:maxIcon.right
-                anchors.leftMargin: parent.width * 0.2
-                anchors.verticalCenter: parent.verticalCenter
+                Loader {
+                    id: closeIcon
+                    sourceComponent: iconItem
+                    onLoaded: {
+                        item.imgSource = "/img/close.png"
+                    }
 
-                Image {
-                    anchors.verticalCenter: parent.verticalCenter
-                    source: "/img/close.png"
+                    Connections{
+                        target: closeIcon.item
+                        onIconClicked: {
+                            Qt.quit()
+                        }
+                    }
                 }
             }
         }
@@ -152,10 +245,6 @@ Rectangle {
         anchors.fill: parent
         acceptedButtons: Qt.LeftButton
         propagateComposedEvents: true
-
-        onDoubleClicked: {
-            Qt.quit();
-        }
 
         onPressed: {
             isPress = true

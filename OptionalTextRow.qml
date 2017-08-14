@@ -3,6 +3,7 @@ import QtQuick.Controls 1.3
 import QtQuick.Controls.Styles 1.3
 
 Item {
+    id: optionalTextRow
     width: rowContent.width
     height: rowContent.height
 
@@ -10,14 +11,19 @@ Item {
     property alias placeholderText: rowTextField.placeholderText
     property alias rowWidth: rowContent.width
     property alias rowHeight: rowContent.height
+    property alias textField: rowTextField
     property real textWidth: 120
+    property color textColor: "#333"
+    property string unitText: ''
+    property var inputValidator: DoubleValidator{decimals:2}
+    property real controlSpacing: 10
 
-    Rectangle{
+    Row{
         id: rowContent
+        spacing: controlSpacing
 
         NormalCheckbox{
             id: rowContentCheckbox
-            anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
         }
 
@@ -25,13 +31,12 @@ Item {
             id: rowTextField
             font.family: "宋体"
             font.pixelSize: 12
-            anchors.left: rowContentCheckbox.right
-            anchors.leftMargin: parent.width * 0.06
             anchors.verticalCenter: parent.verticalCenter
+            validator: optionalTextRow.inputValidator
 
             style:TextFieldStyle{
                 font: rowTextField.font
-                textColor: "#333"
+                textColor: optionalTextRow.textColor
                 background: Rectangle {
                       implicitWidth: textWidth
                       implicitHeight: 25
@@ -39,6 +44,15 @@ Item {
                       border.width: 1
                 }
             }
+        }
+
+        Label{
+            id: rowTextUint
+            font.family:"宋体"
+            font.pixelSize:12
+            color: "#666"
+            text: optionalTextRow.unitText
+            anchors.verticalCenter: parent.verticalCenter
         }
     }
 }

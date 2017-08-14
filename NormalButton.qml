@@ -13,6 +13,7 @@ Item {
     property real buttonTextSize: 12
     property color buttonTextColor: "#333"
     property bool hasBorder: true
+    property real buttonRadius: 0
     property alias button: sourceButton
 
     Button{
@@ -40,6 +41,7 @@ Item {
                         text: sourceButton.bText
                     }
 
+                    radius: normalButton.buttonRadius
                     implicitWidth: textInfor.contentWidth + fillWidth
                     implicitHeight: textInfor.contentHeight + fillHeight
                     border.color: control.pressed ? "#6CF" : "#E4E4E4"

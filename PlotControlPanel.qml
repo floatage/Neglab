@@ -55,21 +55,8 @@ Rectangle{
                 rowWidth: parent.width
                 rowHeight: parent.height
                 labelText: "时间间隔"
-                sliderText: "20.0"
+                sliderText: "0 s"
                 sliderWidth: parent.width * 0.6
-            }
-        }
-
-        Rectangle{
-            id: eegMaxRow
-            width: parent.width
-            height: parent.height / 7
-
-            TextRow{
-                anchors.verticalCenter: parent.verticalCenter
-                rowText: "脑电上限"
-                tWidth: 174
-                tPlaceholderText: "6.600"
             }
         }
 
@@ -81,21 +68,26 @@ Rectangle{
             TextRow{
                 anchors.verticalCenter: parent.verticalCenter
                 rowText: "脑电下限"
-                tWidth: 174
-                tPlaceholderText: "-6.600"
+                tWidth: parent.width * 0.66
+                tPlaceholderText: "-6.00"
+                unitText: "mV"
+                controlSpacing: parent.width * 0.04
             }
         }
 
         Rectangle{
-            id: highpassFilterRow
+            id: eegMaxRow
             width: parent.width
             height: parent.height / 7
-            OptionalTextRow{
-                rowWidth: parent.width
-                rowHeight: parent.height
-                checkboxText: "高通滤波"
-                placeholderText: "30.00"
-                textWidth: parent.width * 0.6
+
+            TextRow{
+                anchors.verticalCenter: parent.verticalCenter
+                rowText: "脑电上限"
+                tWidth: parent.width * 0.66
+                tPlaceholderText: "6.000"
+                unitText: "mV"
+                inputValidator: DoubleValidator{decimals: 3}
+                controlSpacing: parent.width * 0.04
             }
         }
 
@@ -108,7 +100,25 @@ Rectangle{
                 rowHeight: parent.height
                 checkboxText: "低通滤波";
                 placeholderText: "30.00"
-                textWidth: parent.width * 0.6
+                textWidth: parent.width * 0.55
+                unitText: "Hz"
+                controlSpacing: parent.width * 0.04
+            }
+        }
+
+        Rectangle{
+            id: highpassFilterRow
+            width: parent.width
+            height: parent.height / 7
+            OptionalTextRow{
+                rowWidth: parent.width
+                rowHeight: parent.height
+                checkboxText: "高通滤波"
+                placeholderText: "0.500"
+                textWidth: parent.width * 0.55
+                unitText: "Hz"
+                inputValidator: DoubleValidator{decimals: 3}
+                controlSpacing: parent.width * 0.04
             }
         }
 
@@ -120,8 +130,11 @@ Rectangle{
                 rowWidth: parent.width
                 rowHeight: parent.height
                 checkboxText: "采样率"
-                placeholderText: "80.0"
-                textWidth: parent.width * 0.65
+                placeholderText: "80"
+                textWidth: parent.width * 0.595
+                unitText: "%"
+                inputValidator: IntValidator{bottom: 0; top: 100}
+                controlSpacing: parent.width * 0.04
             }
         }
     }

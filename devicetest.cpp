@@ -4,7 +4,7 @@
 #include <QDebug>
 
 DeviceTest* DeviceTest::instance = nullptr;
-DeviceTest::DeviceTest(QObject *parent) : QObject(parent), serialPort()
+DeviceTest::DeviceTest(QObject *parent) : QObject(parent), serialPort(), dataTransferIsStart(false)
 {
     connect(&serialPort, SIGNAL(readyRead()), SLOT(handleReadyRead()));
     connect(&serialPort, SIGNAL(error(QSerialPort::SerialPortError)), SLOT(handleError(QSerialPort::SerialPortError)));
@@ -108,7 +108,8 @@ QVariant DeviceTest::recvDataFromPort(void)
 bool DeviceTest::disconnectPort(void)
 {
     qDebug() << "start disconnectPort";
-    serialPort.close();
+    if (serialPort.isOpen())
+        serialPort.close();
     return true;
 }
 
@@ -144,4 +145,83 @@ bool DeviceTest::connectDevice(const QVariant &deviceNum)
 
     qDebug() << "connect device failed";
     return false;
+}
+
+int DeviceTest::startDataTransfer()
+{
+    int err = -1, readCounter = 0;
+    uchar buf[1100] = "", oddData[20] = "";
+    uchar headFlag1 = 0xaa, headFlag2 = 0x55;
+    const ushort wndSize = 20, bufSize = 1024;
+    const int dataUnitLen = wndSize - 2;
+    memset(buf, 0, bufSize);
+
+//    std::string readData;
+//    int readlen = m_datmgr->rawread(buf, bufSize);
+//    uchar* wndPtr = buf;
+//    while (true)
+//    {
+//        for (int begin = 0, end = readlen - wndSize; begin < end; ++begin)
+//        {
+//            if (wndPtr[dataUnitLen] == headFlag1 && wndPtr[dataUnitLen+1] == headFlag2)
+//            {
+//                uchar rawdata[20] = "", pack[12] = "";
+//                memcpy_s(rawdata, 20, wndPtr, dataUnitLen);
+//                for (int pos = 0, end = dataUnitLen / 3; pos < end; ++pos)
+//                    memcpy_s(pack + pos * 2, 2, rawdata + pos * 3 + 1, 2);
+
+//                readData += (char*)pack;
+//                negPrintBuffer(pack, 12, 1);
+//                wndPtr += 20;
+//            }
+//            else
+//            {
+//                wndPtr += 1;
+//            }
+//            memcpy_s(oddData, dataUnitLen, wndPtr, dataUnitLen);
+//        }
+
+//        ++readCounter;
+//        if (readCounter % 10 == 0) {
+//            storeNegData((char*)readData.c_str(), readData.size());
+//            readData.clear();
+//        }
+
+//        readlen = m_datmgr->rawread(buf + dataUnitLen, bufSize);
+//        memcpy_s(buf, dataUnitLen, oddData, dataUnitLen);
+//        readlen += dataUnitLen;
+//        wndPtr = buf;
+//    }
+
+    return err;
+}
+
+int DeviceTest::pauseDataTransfer()
+{
+    return -1;
+}
+
+int DeviceTest::finishDataTransfer()
+{
+    return -1;
+}
+
+char* DeviceTest::extractRealData()
+{
+    return NULL;
+}
+
+int DeviceTest::openDataFile(const QVariant& fileName)
+{
+    return -1;
+}
+
+int DeviceTest::saveExtractedDataToFile(const QVariant& fileName, char* data)
+{
+    return -1;
+}
+
+int DeviceTest::saveDataToFile(const QVariant& filename)
+{
+    return -1;
 }

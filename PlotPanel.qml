@@ -2,6 +2,11 @@ import QtQuick 2.0
 import QtQuick.Controls 1.3
 
 Rectangle{
+    id: plotPanel
+
+    property var parentRef: null
+    property Component floatComponent: null
+    property var floatInstance: null
 
     Component {
         id: iconItem
@@ -15,13 +20,13 @@ Rectangle{
             property string imgSource
             property real imgScale: 1.0
 
-            signal picLoad(Image img)
             signal iconClicked()
 
             Image {
                 id:iconPic
                 source: imgSource
                 scale: imgScale
+                smooth: true
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.left: parent.left
             }
@@ -30,7 +35,26 @@ Rectangle{
                 anchors.fill: parent
                 hoverEnabled: true
                 acceptedButtons: Qt.LeftButton
-                onClicked: iconRect.iconClicked()
+                property var mask: null
+
+                onClicked: {
+                    iconRect.iconClicked()
+                }
+
+                onPressed: {
+                    if (mask === null){
+                        mask = Qt.createQmlObject(
+                                    'import QtGraphicalEffects 1.0;ColorOverlay{anchors.fill:iconPic;source:iconPic;color:"#6DF"}',
+                                    iconRect, "")
+                    }
+                    iconPic.scale *= 0.9
+                }
+
+                onReleased: {
+                    if (mask !== null)
+                        mask.destroy()
+                    iconPic.scale /= 0.9
+                }
             }
         }
     }
@@ -49,7 +73,7 @@ Rectangle{
             anchors.verticalCenter: parent.verticalCenter
 
             Row{
-                spacing: 45
+                spacing: (parent.width - creatIcon.width*3)/2
 
                 Loader {
                     id: creatIcon
@@ -88,11 +112,12 @@ Rectangle{
             width:parent.width * 0.252
             height: parent.height * 0.625
             anchors.left: plotAreaToolBarSplitLine.right
-            anchors.leftMargin: parent.width * 0.045
+            anchors.leftMargin: parent.width * 0.05
             anchors.verticalCenter: parent.verticalCenter
 
             Row{
-                spacing: 45
+                id: deviceIconGroupRow
+                spacing: (parent.width - inforIcon.width*4)/3
                 anchors.verticalCenter: parent.verticalCenter
 
                 Loader {
@@ -101,6 +126,27 @@ Rectangle{
                     onLoaded: {
                         item.imgSource = "/img/userinfor.png"
                         item.imgScale = 0.85
+                    }
+
+                    Connections{
+                        target: inforIcon.item
+                        onIconClicked: {
+                            var rootItemComponent = plotPanel.floatComponent
+                            if(rootItemComponent === null){
+                                rootItemComponent = Qt.createComponent("GatherInforPanel.qml");
+                            }
+
+                            if (plotPanel.floatInstance === null){
+                                if(rootItemComponent.status === Component.Ready) {
+                                    var wx = deviceIconGroup.x - 245
+                                    var wy = plotAreaToolBar.y + plotAreaToolBar.height
+                                    plotPanel.floatInstance = rootItemComponent.createObject(plotPanel, {"parentRef":plotPanel, "x":wx, "y":wy});
+                                }
+                            }
+                            else{
+                                plotPanel.floatInstance.destroy()
+                            }
+                        }
                     }
                 }
 
@@ -193,7 +239,7 @@ Rectangle{
             }
 
             Row{
-                spacing: 10
+                spacing: (parent.width - dataPlotMode.width*3)/2
                 Loader {
                     id: dataPlotMode
                     sourceComponent: switchButtonIcon

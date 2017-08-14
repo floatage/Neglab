@@ -29,10 +29,17 @@ Item {
         Slider{
             id: rowSlider
             width: sliderWidth
-            value: 0.5
+            value: 0
             anchors.verticalCenter: parent.verticalCenter
             anchors.left: rowLabel.right
-            anchors.leftMargin: parent.width * 0.04
+            anchors.leftMargin: parent.width * 0.05
+            maximumValue: 100
+            minimumValue: 0
+            stepSize: 1
+
+            onValueChanged: {
+                rowSliderValue.text = value + " s"
+            }
 
             style: SliderStyle {
                     groove: Rectangle {
@@ -57,7 +64,7 @@ Item {
             color: sliderTextColor
             anchors.verticalCenter: parent.verticalCenter
             anchors.left: rowSlider.right
-            anchors.leftMargin: parent.width * 0.04
+            anchors.leftMargin: parent.width * 0.05
         }
     }
 }
