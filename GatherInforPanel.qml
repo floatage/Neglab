@@ -1,7 +1,6 @@
 import QtQuick 2.0
 import QtQuick.Controls 1.3
 import QtQuick.Controls.Styles 1.3
-//import QtGraphicalEffects 1.0
 
 Rectangle{
     width: 510
@@ -75,31 +74,6 @@ Rectangle{
         width: parent.width
         height: parent.height
 
-//        border.width: 1
-//        border.color: "#6FF"
-
-        Rectangle {
-            id: gatherRightBorder
-            width: 1
-            height: parent.height
-            anchors.right: parent.right
-            color: "#66FFFF"
-        }
-        Rectangle {
-            id: gatherLeftBorder
-            width: 1
-            height: parent.height
-            anchors.left: parent.left
-            color: "#66FFFF"
-        }
-        Rectangle {
-            id: gatherBottomBorder
-            width: parent.width-2
-            height: 1
-            anchors.bottom: parent.bottom
-            color: "#66FFFF"
-        }
-
         Rectangle{
             id: generalContentPanel
             width:parent.width * 0.92
@@ -130,6 +104,7 @@ Rectangle{
                             rowText: "索引："
                             tWidth: 174
                             tPlaceholderText: "请输入.."
+                            inputValidator: null
                         }
 
                         Rectangle{
@@ -172,6 +147,7 @@ Rectangle{
                             rowText: "姓名："
                             tWidth: 174
                             tPlaceholderText: "请输入.."
+                            inputValidator: null
                         }
 
                         TextRow{
@@ -187,6 +163,7 @@ Rectangle{
                             rowText: "操作员："
                             tWidth: 162
                             tPlaceholderText: "请输入.."
+                            inputValidator: null
                         }
 
                         TextRow{
@@ -194,6 +171,7 @@ Rectangle{
                             rowText: "单位："
                             tWidth: 174
                             tPlaceholderText: "请输入.."
+                            inputValidator: null
                         }
 
                         TextRow{
@@ -223,6 +201,7 @@ Rectangle{
                         tPlaceholderText: "请输入.."
                         anchors.top: inforGrid.bottom
                         anchors.topMargin: 0
+                        inputValidator: null
                     }
                 }
 
@@ -263,8 +242,10 @@ Rectangle{
                                 var formInfor = getGatherInfor()
                                 if (formInfor !== null){
                                     parentRef.gatherInfor = formInfor
-                                    if (parentRef.floatInstance !== null)
+                                    if (parentRef.floatInstance !== null){
                                         parentRef.floatInstance.destroy()
+                                        parentRef.floatInstance = null
+                                    }
                                 }
                             }
                         }
@@ -279,33 +260,38 @@ Rectangle{
                         Connections{
                             target: gatherInputCancleButton.button
                             onClicked: {
-                                if (parentRef.floatInstance !== null)
+                                if (parentRef.floatInstance !== null){
                                     parentRef.floatInstance.destroy()
+                                    parentRef.floatInstance = null
+                                }
                             }
                         }
                     }
                 }
             }
         }
-    }
 
-//    DropShadow {
-//        anchors.fill: generalSettingPanel
-//        horizontalOffset: 1
-//        verticalOffset: 1
-//        radius: 12
-//        samples: 8
-//        color: "#6FF"
-//        source: generalSettingPanel
-//    }
-//    DropShadow {
-//        anchors.fill: generalSettingPanel
-//        horizontalOffset: -1
-//        verticalOffset: -1
-//        radius: 12
-//        samples: 8
-//        color: "#6FF"
-//        source: generalSettingPanel
-//    }
+        Rectangle {
+            id: gatherRightBorder
+            width: 1
+            height: parent.height
+            anchors.right: parent.right
+            color: "#66FFFF"
+        }
+        Rectangle {
+            id: gatherLeftBorder
+            width: 1
+            height: parent.height
+            anchors.left: parent.left
+            color: "#66FFFF"
+        }
+        Rectangle {
+            id: gatherBottomBorder
+            width: parent.width-2
+            height: 1
+            anchors.bottom: parent.bottom
+            color: "#66FFFF"
+        }
+    }
 }
 

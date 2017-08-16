@@ -4,7 +4,8 @@ QT += qml quick serialport
 CONFIG += c++11
 
 SOURCES += main.cpp \
-    devicetest.cpp
+    devicetest.cpp \
+    datafilemanager.cpp
 
 RESOURCES += qml.qrc
 
@@ -15,5 +16,6 @@ QML_IMPORT_PATH =
 include(deployment.pri)
 
 HEADERS += \
-    devicetest.h
+    devicetest.h \
+    datafilemanager.h
 

@@ -5,32 +5,16 @@
 #include <QSerialPort>
 #include <QVariant>
 #include <QString>
+#include <QVector>
+
+#include "datafilemanager.h"
 
 class QSerialPort;
 class DeviceTest : public QObject
 {
     Q_OBJECT
-private:
-    explicit DeviceTest(QObject *parent = 0);
-    DeviceTest(const DeviceTest&);
-    DeviceTest& operator =(const DeviceTest&);
-
-    static DeviceTest* instance;
-
-    QSerialPort serialPort;
-    QString buffer;
-    bool dataTransferIsStart;
-
-    int saveExtractedDataToFile(const QVariant& fileName, char* data);
-
-signals:
-    void deviceReadyRead(QVariant readData);
-
-public slots:
-    void handleReadyRead();
-    void handleError(QSerialPort::SerialPortError error);
-
 public:
+    ~DeviceTest();
     static DeviceTest* getInstance(void);
 
     Q_INVOKABLE QVariantList getAvailPortNames(void);
@@ -46,10 +30,36 @@ public:
     Q_INVOKABLE int startDataTransfer();
     Q_INVOKABLE int pauseDataTransfer();
     Q_INVOKABLE int finishDataTransfer();
-    Q_INVOKABLE char* extractRealData();
 
     Q_INVOKABLE int openDataFile(const QVariant& fileName);
     Q_INVOKABLE int saveDataToFile(const QVariant& filename);
+
+    enum DeviceStatus{CLOSED, OPEN, PAUSE, DATATRANSFER};
+
+signals:
+    void deviceReadyRead(QVariant readData);
+
+public slots:
+    void handleReadyRead();
+    void handleError(QSerialPort::SerialPortError error);
+
+private:
+    explicit DeviceTest(QObject *parent = 0);
+    DeviceTest(const DeviceTest&);
+    DeviceTest& operator =(const DeviceTest&);
+
+    static DeviceTest* instance;
+
+    QSerialPort serialPort;
+    QString strBuffer;
+    QByteArray byteBuffer;
+
+    DeviceStatus deviceStatus;
+    DataFileManager dataFilemgr;
+
+
+    QVariantList extractRealData(QByteArray& buffer);
+    int saveExtractedDataToFile(const QVariant& fileName, char* data);
 };
 
 #endif // DEVICETEST_H

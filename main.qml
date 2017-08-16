@@ -1,7 +1,5 @@
-import QtQuick 2.5
+import QtQuick 2.0
 import QtQuick.Window 2.2
-import QtQuick.Controls 1.3
-import QtQuick.Controls.Styles 1.3
 
 Window {
     id: mainWindow
@@ -20,6 +18,7 @@ Window {
 
     function independentInstanceDestory(){
         independentInstance.destroy()
+        independentInstance = null
     }
 
     EeglabTitle{

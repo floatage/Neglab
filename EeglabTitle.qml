@@ -57,6 +57,7 @@ Rectangle {
                         }
                         else{
                             iconPic.mask.destroy()
+                            iconPic.mask = null
                         }
                     }
                 }
@@ -112,9 +113,11 @@ Rectangle {
                                 rootItemComponent = Qt.createComponent("DeviceTestWindow.qml");
                             }
                             if(rootItemComponent.status === Component.Ready) {
-                                var wx = (titleArea.target.width - 510) / 2
-                                var wy = (titleArea.target.height - 315) / 2
-                                titleArea.target.independentInstance = rootItemComponent.createObject(titleArea.target, {"target":titleArea.target, "x":wx, "y":wy});
+                                if (titleArea.target.independentInstance === null){
+                                    var wx = (titleArea.target.width - 510) / 2
+                                    var wy = (titleArea.target.height - 315) / 2
+                                    titleArea.target.independentInstance = rootItemComponent.createObject(titleArea.target, {"target":titleArea.target, "x":wx, "y":wy});
+                                }
                             }
                         }
                     }
@@ -154,6 +157,7 @@ Rectangle {
                             }
                             else{
                                 titleArea.target.floatInstance.destroy()
+                                titleArea.target.floatInstance = null
                             }
                         }
                     }
@@ -228,6 +232,7 @@ Rectangle {
                     Connections{
                         target: closeIcon.item
                         onIconClicked: {
+                            DeviceTestManager.disconnectPort()
                             Qt.quit()
                         }
                     }

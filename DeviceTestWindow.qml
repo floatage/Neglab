@@ -46,6 +46,7 @@ Rectangle{
                         }
                         else{
                             iconPic.mask.destroy()
+                            iconPic.mask = null
                         }
                     }
                 }
@@ -319,7 +320,6 @@ Rectangle{
                                     var deviceNum = deviceListCombox.comboxCurrentText
                                     if (deviceListCombox.comboxCurrentText !== ""){
                                         DeviceTestManager.connectDevice(deviceNum.substring(1, deviceNum.length))
-//                                        console.log(deviceNum.substring(1, deviceNum.length))
                                     }
                                 }
                             }

@@ -1,6 +1,8 @@
 import QtQuick 2.0
 import QtQuick.Controls 1.3
 
+//多次点击开始图标会导致内存一直升高的情况
+
 Rectangle{
     id: plotPanel
 
@@ -10,7 +12,55 @@ Rectangle{
 
     //0: ready  1: ploting  2: pause  3: finished
     property int plotStatus: 0
+    //0: closed  1: search  2: pause 3:data
+    property int deviceStatus: 0
     property var gatherInfor: null
+
+    function gatherMainProcess(){
+        if (plotPanel.plotStatus === 0){
+            if (plotPanel.deviceStatus === 0){
+                DeviceTestManager.openSerialPort(plotPanel.gatherInfor.port)
+                DeviceTestManager.sendDataToPort("AT:GS")
+                plotPanel.deviceStatus = 1
+            }
+            else if(plotPanel.deviceStatus === 3){
+                plotPanel.plotStatus = 1
+                deviceStartIcon.item.imgSource = "/img/pause.png"
+                DeviceTestManager.startDataTransfer()
+            }
+        }
+        else if(plotPanel.plotStatus === 1){
+            plotPanel.plotStatus = 2
+            deviceStartIcon.item.imgSource = "/img/start.png"
+            DeviceTestManager.pauseDataTransfer()
+            plotPanel.deviceStatus = 2
+        }
+        else if(plotPanel.plotStatus === 2){
+            plotPanel.plotStatus = 1
+            deviceStartIcon.item.imgSource = "/img/pause.png"
+            plotPanel.deviceStatus = 3
+            DeviceTestManager.startDataTransfer()
+        }
+    }
+
+    Connections{
+        target: DeviceTestManager
+        onDeviceReadyRead: {
+            if (plotPanel.deviceStatus === 1){
+                var deviceNumStr = readData.match("NAME-#[0-9]+-")
+                if (deviceNumStr !== null)
+                {
+                    deviceNumStr = '' + deviceNumStr
+                    DeviceTestManager.sendDataToPort("AT:GI-#" + deviceNumStr.match("[0-9]+"))
+                    plotPanel.deviceStatus = 3
+                    gatherMainProcess()
+                }
+            }
+            else if (plotPanel.deviceStatus === 3){
+                console.log(readData)
+            }
+        }
+    }
 
     Component {
         id: iconItem
@@ -55,8 +105,10 @@ Rectangle{
                 }
 
                 onReleased: {
-                    if (mask !== null)
+                    if (mask !== null){
                         mask.destroy()
+                        mask = null
+                    }
                     iconPic.scale /= 0.9
                 }
             }
@@ -149,6 +201,7 @@ Rectangle{
                             }
                             else{
                                 plotPanel.floatInstance.destroy()
+                                plotPanel.floatInstance = null
                             }
                         }
                     }
@@ -160,31 +213,20 @@ Rectangle{
                     onLoaded: {
                         item.imgSource = "/img/start.png"
                         item.imgScale = 0.85
-                    }
+                    } 
 
                     Connections{
                         target: deviceStartIcon.item
                         onIconClicked: {
-                            if (plotPanel.plotStatus === 0 || plotPanel.plotStatus === 2){
-                                plotPanel.plotStatus = 1
-                                deviceStartIcon.item.imgSource = "/img/pause.png"
+                            if (plotPanel.gatherInfor === null){
+                                inforIcon.item.iconClicked()
+                                return
                             }
-                            else if(plotPanel.plotStatus == 1){
-                                plotPanel.plotStatus = 2
-                                deviceStartIcon.item.imgSource = "/img/start.png"
-                            }
+
+                            gatherMainProcess()
                         }
                     }
                 }
-
-//                Loader {
-//                    id: devicePauseIcon
-//                    sourceComponent: iconItem
-//                    onLoaded: {
-//                        item.imgSource = "/img/pause.png"
-//                        item.imgScale = 0.85
-//                    }
-//                }
 
                 Loader {
                     id: deviceStopIcon
@@ -192,6 +234,17 @@ Rectangle{
                     onLoaded: {
                         item.imgSource = "/img/stop.png"
                         item.imgScale = 0.85
+                    }
+
+                    Connections{
+                        target: deviceStopIcon.item
+                        onIconClicked: {
+                            plotPanel.plotStatus = 0
+                            deviceStartIcon.item.imgSource = "/img/start.png"
+                            plotPanel.gatherInfor = null
+                            DeviceTestManager.disconnectPort()
+                            plotPanel.deviceStatus = 0
+                        }
                     }
                 }
             }

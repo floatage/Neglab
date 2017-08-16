@@ -1,7 +1,6 @@
 import QtQuick 2.0
 import QtQuick.Controls 1.3
 import QtQuick.Controls.Styles 1.3
-//import QtGraphicalEffects 1.0
 
 Rectangle{
     width: 510
@@ -9,21 +8,12 @@ Rectangle{
 
     property var parentRef: null
 
-//        Image {
-//            id: generalSettingExtra
-//            anchors.horizontalCenter: parent.horizontalCenter
-//            source: "/img/extra.png"
-//        }
-
     Rectangle{
         id: generalSettingPanel
         width: parent.width
 //            height: 115
         height: parent.height
 //            anchors.top: generalSettingExtra.bottom
-
-//        border.width: 1
-//        border.color: "#6FF"
 
         Rectangle{
             id: generalContentPanel
@@ -113,8 +103,10 @@ Rectangle{
                         Connections{
                             target: settingCancleButton.button
                             onClicked: {
-                                if (parentRef.floatInstance !== null)
+                                if (parentRef.floatInstance !== null){
                                     parentRef.floatInstance.destroy()
+                                    parentRef.floatInstance = null
+                                }
                             }
                         }
                     }
@@ -144,23 +136,5 @@ Rectangle{
         anchors.bottom: parent.bottom
         color: "#66FFFF"
     }
-//    DropShadow {
-//        anchors.fill: generalSettingPanel
-//        horizontalOffset: 1
-//        verticalOffset: 1
-//        radius: 12
-//        samples: 8
-//        color: "#6FF"
-//        source: generalSettingPanel
-//    }
-//    DropShadow {
-//        anchors.fill: generalSettingPanel
-//        horizontalOffset: -1
-//        verticalOffset: -1
-//        radius: 12
-//        samples: 8
-//        color: "#6FF"
-//        source: generalSettingPanel
-//    }
 }
 

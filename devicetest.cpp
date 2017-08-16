@@ -1,44 +1,15 @@
 #include "devicetest.h"
-
 #include <QSerialPortInfo>
 #include <QDebug>
 
+#include "datafilemanager.cpp"
+
 DeviceTest* DeviceTest::instance = nullptr;
-DeviceTest::DeviceTest(QObject *parent) : QObject(parent), serialPort(), dataTransferIsStart(false)
+DeviceTest::DeviceTest(QObject *parent) : QObject(parent), serialPort(), deviceStatus(CLOSED), dataFilemgr("tmp.txt")
 {
+    dataFilemgr.start();
     connect(&serialPort, SIGNAL(readyRead()), SLOT(handleReadyRead()));
     connect(&serialPort, SIGNAL(error(QSerialPort::SerialPortError)), SLOT(handleError(QSerialPort::SerialPortError)));
-}
-
-void DeviceTest::handleReadyRead()
-{
-    buffer.append(serialPort.readAll());
-
-    qDebug() << "handle buffer before" << buffer;
-
-    QStringList lines = buffer.split("\r\n");
-    if (lines.size() != 1)
-    {
-        for (int lineCount = 0, end = lines.size() - 1; lineCount < end; ++lineCount)
-        {
-            emit deviceReadyRead(lines[lineCount]);
-        }
-        buffer.swap(lines[lines.size()-1]);
-    }
-    else if (buffer.size() > 60)
-    {
-        emit deviceReadyRead(buffer);
-        buffer.clear();
-    }
-
-    qDebug() << "handle buffer after" << buffer;
-}
-
-void DeviceTest::handleError(QSerialPort::SerialPortError error)
-{
-    if (error == QSerialPort::ReadError) {
-        qDebug() << "Read Error";
-    }
 }
 
 DeviceTest* DeviceTest::getInstance(void)
@@ -48,6 +19,59 @@ DeviceTest* DeviceTest::getInstance(void)
     }
 
     return DeviceTest::instance;
+}
+
+DeviceTest::~DeviceTest()
+{
+    if (DeviceTest::instance)
+        delete DeviceTest::instance;
+}
+
+void DeviceTest::handleReadyRead()
+{
+    if (deviceStatus == OPEN)
+    {
+        strBuffer.append(serialPort.readAll());
+        qDebug() << "handle buffer before" << strBuffer;
+
+        QStringList lines = strBuffer.split("\r\n");
+        if (lines.size() != 1)
+        {
+            for (int lineCount = 0, end = lines.size() - 1; lineCount < end; ++lineCount)
+            {
+                emit deviceReadyRead(lines[lineCount]);
+            }
+            strBuffer.swap(lines[lines.size()-1]);
+        }
+        else if (strBuffer.size() > 60)
+        {
+            emit deviceReadyRead(strBuffer);
+            strBuffer.clear();
+        }
+
+        qDebug() << "handle buffer after" << strBuffer;
+    }
+    else if (deviceStatus == PAUSE)
+    {
+
+    }
+    else if (deviceStatus == DATATRANSFER)
+    {
+        byteBuffer.append(serialPort.readAll());
+
+        if (byteBuffer.size() > 128){
+            QVariantList data = extractRealData(byteBuffer);
+            dataFilemgr.writeFile(data);
+            emit deviceReadyRead(data);
+        }
+    }
+}
+
+void DeviceTest::handleError(QSerialPort::SerialPortError error)
+{
+    if (error == QSerialPort::ReadError) {
+        qDebug() << "Read Error";
+    }
 }
 
 QVariantList DeviceTest::getAvailPortNames(void)
@@ -77,11 +101,16 @@ bool DeviceTest::openSerialPort(const QVariant& portName)
     serialPort.setStopBits(QSerialPort::OneStop);
     serialPort.setParity(QSerialPort::NoParity);
 
-    return serialPort.open(QSerialPort::ReadWrite);;
+    deviceStatus = OPEN;
+    return serialPort.open(QSerialPort::ReadWrite);
 }
 
 int DeviceTest::sendDataToPort(const QVariant& data)
 {
+    if (deviceStatus != OPEN){
+        return -1;
+    }
+
     qDebug() << "start sendDataToPort" << data;
     QString writeData = data.toString();
     int writeSize = (int)serialPort.write(writeData.toStdString().c_str());
@@ -98,6 +127,10 @@ int DeviceTest::sendDataToPort(const QVariant& data)
 
 QVariant DeviceTest::recvDataFromPort(void)
 {
+    if (deviceStatus != OPEN){
+        return -1;
+    }
+
     qDebug() << "start recvDataFromPort";
     QByteArray readData = serialPort.readAll();
     qDebug() << readData;
@@ -110,6 +143,7 @@ bool DeviceTest::disconnectPort(void)
     qDebug() << "start disconnectPort";
     if (serialPort.isOpen())
         serialPort.close();
+    deviceStatus = CLOSED;
     return true;
 }
 
@@ -149,70 +183,63 @@ bool DeviceTest::connectDevice(const QVariant &deviceNum)
 
 int DeviceTest::startDataTransfer()
 {
-    int err = -1, readCounter = 0;
-    uchar buf[1100] = "", oddData[20] = "";
-    uchar headFlag1 = 0xaa, headFlag2 = 0x55;
-    const ushort wndSize = 20, bufSize = 1024;
-    const int dataUnitLen = wndSize - 2;
-    memset(buf, 0, bufSize);
-
-//    std::string readData;
-//    int readlen = m_datmgr->rawread(buf, bufSize);
-//    uchar* wndPtr = buf;
-//    while (true)
-//    {
-//        for (int begin = 0, end = readlen - wndSize; begin < end; ++begin)
-//        {
-//            if (wndPtr[dataUnitLen] == headFlag1 && wndPtr[dataUnitLen+1] == headFlag2)
-//            {
-//                uchar rawdata[20] = "", pack[12] = "";
-//                memcpy_s(rawdata, 20, wndPtr, dataUnitLen);
-//                for (int pos = 0, end = dataUnitLen / 3; pos < end; ++pos)
-//                    memcpy_s(pack + pos * 2, 2, rawdata + pos * 3 + 1, 2);
-
-//                readData += (char*)pack;
-//                negPrintBuffer(pack, 12, 1);
-//                wndPtr += 20;
-//            }
-//            else
-//            {
-//                wndPtr += 1;
-//            }
-//            memcpy_s(oddData, dataUnitLen, wndPtr, dataUnitLen);
-//        }
-
-//        ++readCounter;
-//        if (readCounter % 10 == 0) {
-//            storeNegData((char*)readData.c_str(), readData.size());
-//            readData.clear();
-//        }
-
-//        readlen = m_datmgr->rawread(buf + dataUnitLen, bufSize);
-//        memcpy_s(buf, dataUnitLen, oddData, dataUnitLen);
-//        readlen += dataUnitLen;
-//        wndPtr = buf;
-//    }
-
-    return err;
+    qDebug() << "start data transfer";
+    deviceStatus = DATATRANSFER;
+    return 1;
 }
 
 int DeviceTest::pauseDataTransfer()
 {
-    return -1;
+    qDebug() << "pause data transfer";
+    deviceStatus = PAUSE;
+    return 1;
 }
 
 int DeviceTest::finishDataTransfer()
 {
-    return -1;
+    qDebug() << "finish data transfer";
+    deviceStatus = OPEN;
+    return 1;
 }
 
-char* DeviceTest::extractRealData()
+QVariantList DeviceTest::extractRealData(QByteArray& buffer)
 {
-    return NULL;
+//    qDebug() << "start data extract: " << buffer;
+
+    QVariantList result;
+    uchar headFlag1 = 0xaa, headFlag2 = 0x55;
+    const int wndSize = 20, dataUnitLen = wndSize - 2;
+    uchar oddData[20] = "";
+
+    uchar* wndPtr = (uchar*)buffer.data();
+
+    for (int begin = 0, end = buffer.size() - wndSize; begin < end; ++begin)
+    {
+        if (wndPtr[dataUnitLen] == headFlag1 && wndPtr[dataUnitLen+1] == headFlag2)
+        {
+            uchar rawdata[20] = "";
+            memcpy_s(rawdata, 20, wndPtr, dataUnitLen);
+            for (int pos = 0, end = dataUnitLen / 3; pos < end; ++pos){
+               result.append((((uint)rawdata[pos * 3 + 1]) << 8) + (uint)rawdata[pos * 3 + 2]);
+            }
+
+            wndPtr += 20;
+        }
+        else
+        {
+            wndPtr += 1;
+        }
+        memcpy_s(oddData, dataUnitLen, wndPtr, dataUnitLen);
+    }
+    buffer.clear();
+    buffer.append((char*)oddData);
+
+    return result;
 }
 
 int DeviceTest::openDataFile(const QVariant& fileName)
 {
+    qDebug() << "start open data file";
     return -1;
 }
 
@@ -223,5 +250,6 @@ int DeviceTest::saveExtractedDataToFile(const QVariant& fileName, char* data)
 
 int DeviceTest::saveDataToFile(const QVariant& filename)
 {
+    qDebug() << "start save data file";
     return -1;
 }
