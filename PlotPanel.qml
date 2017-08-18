@@ -9,6 +9,8 @@ Rectangle{
     property var parentRef: null
     property Component floatComponent: null
     property var floatInstance: null
+    property Component plotAreaComponent: null
+    property var plotAreaInstance: null
 
     //0: ready  1: ploting  2: pause  3: finished
     property int plotStatus: 0
@@ -17,30 +19,32 @@ Rectangle{
     property var gatherInfor: null
 
     function gatherMainProcess(){
-        if (plotPanel.plotStatus === 0){
-            if (plotPanel.deviceStatus === 0){
-                DeviceTestManager.openSerialPort(plotPanel.gatherInfor.port)
-                DeviceTestManager.sendDataToPort("AT:GS")
-                plotPanel.deviceStatus = 1
-            }
-            else if(plotPanel.deviceStatus === 3){
-                plotPanel.plotStatus = 1
-                deviceStartIcon.item.imgSource = "/img/pause.png"
-                DeviceTestManager.startDataTransfer()
-            }
-        }
-        else if(plotPanel.plotStatus === 1){
-            plotPanel.plotStatus = 2
-            deviceStartIcon.item.imgSource = "/img/start.png"
-            DeviceTestManager.pauseDataTransfer()
-            plotPanel.deviceStatus = 2
-        }
-        else if(plotPanel.plotStatus === 2){
-            plotPanel.plotStatus = 1
-            deviceStartIcon.item.imgSource = "/img/pause.png"
-            plotPanel.deviceStatus = 3
-            DeviceTestManager.startDataTransfer()
-        }
+//        if (plotPanel.plotStatus === 0){
+//            if (plotPanel.deviceStatus === 0){
+//                DeviceTestManager.openSerialPort(plotPanel.gatherInfor.port)
+//                DeviceTestManager.sendDataToPort("AT:GS")
+//                plotPanel.deviceStatus = 1
+//            }
+//            else if(plotPanel.deviceStatus === 3){
+//                plotPanel.plotStatus = 1
+//                deviceStartIcon.item.imgSource = "/img/pause.png"
+//                DeviceTestManager.startDataTransfer()
+//                createPlotArea(DeviceTestManager.getChannelNum())
+//            }
+//        }
+//        else if(plotPanel.plotStatus === 1){
+//            plotPanel.plotStatus = 2
+//            deviceStartIcon.item.imgSource = "/img/start.png"
+//            DeviceTestManager.pauseDataTransfer()
+//            plotPanel.deviceStatus = 2
+//        }
+//        else if(plotPanel.plotStatus === 2){
+//            plotPanel.plotStatus = 1
+//            deviceStartIcon.item.imgSource = "/img/pause.png"
+//            plotPanel.deviceStatus = 3
+//            DeviceTestManager.startDataTransfer()
+//        }
+        createPlotArea(DeviceTestManager.getChannelNum())
     }
 
     Connections{
@@ -59,6 +63,30 @@ Rectangle{
             else if (plotPanel.deviceStatus === 3){
                 console.log(readData)
             }
+        }
+    }
+
+    function createPlotArea(channelNum){
+        var rootItemComponent = plotPanel.plotAreaComponent
+        if(rootItemComponent === null){
+            rootItemComponent = Qt.createComponent("PlotArea.qml");
+        }
+
+        if (plotPanel.plotAreaInstance !== null){
+            plotPanel.plotAreaInstance.destroy()
+            plotPanel.plotAreaInstance = null
+            console.log("rebuild plot area")
+        }
+
+        if (plotPanel.plotAreaInstance === null &&　rootItemComponent.status === Component.Ready){
+            plotPanel.plotAreaInstance = rootItemComponent.createObject(plotPanel, {'channelNum': channelNum,
+                                                                            'width': plotPanel.width * 0.96,
+                                                                            'height': (plotPanel.height - plotAreaToolBar.height) * 0.96,
+                                                                            'anchors.left': plotPanel.left,
+                                                                            'anchors.leftMargin': plotPanel.width * 0.02,
+                                                                            'anchors.top': plotAreaToolBar.bottom,
+                                                                            'anchors.topMargin': (plotPanel.height - plotAreaToolBar.height) * 0.02
+                                                                        });
         }
     }
 
@@ -218,10 +246,10 @@ Rectangle{
                     Connections{
                         target: deviceStartIcon.item
                         onIconClicked: {
-                            if (plotPanel.gatherInfor === null){
-                                inforIcon.item.iconClicked()
-                                return
-                            }
+//                            if (plotPanel.gatherInfor === null){
+//                                inforIcon.item.iconClicked()
+//                                return
+//                            }
 
                             gatherMainProcess()
                         }
@@ -348,11 +376,14 @@ Rectangle{
         }
     }
 
-    Rectangle{
-        id: plotArea
-        width: parent.width
-        height: parent.height - plotAreaToolBar.height
-        anchors.top: plotAreaToolBar.bottom
-    }
+//    PlotArea{
+//        id: plotArea
+//        width: parent.width * 0.96
+//        height: (parent.height - plotAreaToolBar.height) * 0.96
+//        anchors.left: parent.left
+//        anchors.leftMargin: parent.width * 0.02
+//        anchors.top: plotAreaToolBar.bottom
+//        anchors.topMargin: (parent.height - plotAreaToolBar.height) * 0.02
+//    }
 }
 

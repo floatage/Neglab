@@ -34,6 +34,8 @@ public:
     Q_INVOKABLE int openDataFile(const QVariant& fileName);
     Q_INVOKABLE int saveDataToFile(const QVariant& filename);
 
+    Q_INVOKABLE int getChannelNum(){ return deviceChannelNum; }
+
     enum DeviceStatus{CLOSED, OPEN, PAUSE, DATATRANSFER};
 
 signals:
@@ -56,7 +58,7 @@ private:
 
     DeviceStatus deviceStatus;
     DataFileManager dataFilemgr;
-
+    int deviceChannelNum;
 
     QVariantList extractRealData(QByteArray& buffer);
     int saveExtractedDataToFile(const QVariant& fileName, char* data);

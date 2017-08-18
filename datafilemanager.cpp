@@ -2,7 +2,8 @@
 #include <QFile>
 #include <QTextStream>
 
-DataFileManager::DataFileManager(const QString& filename) : fileName(filename), signal(), buffer(), isRuning(true), file(filename)
+DataFileManager::DataFileManager(const QString& filename)
+    : fileName(filename), signal(), buffer(), isRuning(true), file(filename)
 {
     file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text);
     signal.lock();

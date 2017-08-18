@@ -32,5 +32,6 @@
         <file>DeviceTestWindow.qml</file>
         <file>PlotControlPanel.qml</file>
         <file>PlotPanel.qml</file>
+        <file>PlotArea.qml</file>
     </qresource>
 </RCC>

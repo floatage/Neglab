@@ -5,7 +5,8 @@
 #include "datafilemanager.cpp"
 
 DeviceTest* DeviceTest::instance = nullptr;
-DeviceTest::DeviceTest(QObject *parent) : QObject(parent), serialPort(), deviceStatus(CLOSED), dataFilemgr("tmp.txt")
+DeviceTest::DeviceTest(QObject *parent)
+    : QObject(parent), serialPort(), deviceStatus(CLOSED), dataFilemgr("tmp.txt"), deviceChannelNum(32)
 {
     dataFilemgr.start();
     connect(&serialPort, SIGNAL(readyRead()), SLOT(handleReadyRead()));
