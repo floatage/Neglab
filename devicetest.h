@@ -18,14 +18,14 @@ public:
     static DeviceTest* getInstance(void);
 
     Q_INVOKABLE QVariantList getAvailPortNames(void);
-    Q_INVOKABLE bool setSerialPort(const QVariant& portName, const QVariantList& portSetting);
+    Q_INVOKABLE bool setupSerialPort(const QVariant& portName, const QVariantList& portSetting);
     Q_INVOKABLE bool openSerialPort(const QVariant& portName);
     Q_INVOKABLE int sendDataToPort(const QVariant& data);
     Q_INVOKABLE QVariant recvDataFromPort(void);
-    Q_INVOKABLE bool disconnectPort(void);
 
     Q_INVOKABLE void searchDevice(void);
     Q_INVOKABLE bool connectDevice(const QVariant& deviceNum);
+    Q_INVOKABLE bool disconnectPort(void);
 
     Q_INVOKABLE int startDataTransfer();
     Q_INVOKABLE int pauseDataTransfer();
@@ -34,7 +34,7 @@ public:
     Q_INVOKABLE int openDataFile(const QVariant& fileName);
     Q_INVOKABLE int saveDataToFile(const QVariant& filename);
 
-    Q_INVOKABLE int getChannelNum(){ return deviceChannelNum; }
+    Q_INVOKABLE int getChannelNum()const{ return deviceChannelNum; }
 
     enum DeviceStatus{CLOSED, OPEN, PAUSE, DATATRANSFER};
 
@@ -59,6 +59,11 @@ private:
     DeviceStatus deviceStatus;
     DataFileManager dataFilemgr;
     int deviceChannelNum;
+
+    const uchar packHeadFlag1, packHeadFlag2;
+
+    int judgeDeviceChannelNum(const QByteArray& data);
+    QByteArray dataTransferMainProcess(QByteArray buffer);
 
     QVariantList extractRealData(QByteArray& buffer);
     int saveExtractedDataToFile(const QVariant& fileName, char* data);

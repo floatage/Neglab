@@ -5,7 +5,9 @@ CONFIG += c++11
 
 SOURCES += main.cpp \
     devicetest.cpp \
-    datafilemanager.cpp
+    datafilemanager.cpp \
+    rawdatahandlemanager.cpp \
+    datahandler.cpp
 
 RESOURCES += qml.qrc
 
@@ -17,5 +19,7 @@ include(deployment.pri)
 
 HEADERS += \
     devicetest.h \
-    datafilemanager.h
+    datafilemanager.h \
+    rawdatahandlemanager.h \
+    datahandler.h
 

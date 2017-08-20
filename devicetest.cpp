@@ -6,7 +6,8 @@
 
 DeviceTest* DeviceTest::instance = nullptr;
 DeviceTest::DeviceTest(QObject *parent)
-    : QObject(parent), serialPort(), deviceStatus(CLOSED), dataFilemgr("tmp.txt"), deviceChannelNum(32)
+    : QObject(parent), serialPort(), deviceStatus(CLOSED), dataFilemgr("tmp.txt"), deviceChannelNum(-1),
+      packHeadFlag1(0xaa), packHeadFlag2(0x55)
 {
     dataFilemgr.start();
     connect(&serialPort, SIGNAL(readyRead()), SLOT(handleReadyRead()));
@@ -61,9 +62,9 @@ void DeviceTest::handleReadyRead()
         byteBuffer.append(serialPort.readAll());
 
         if (byteBuffer.size() > 128){
-            QVariantList data = extractRealData(byteBuffer);
-            dataFilemgr.writeFile(data);
-            emit deviceReadyRead(data);
+            QByteArray oddData = dataTransferMainProcess(byteBuffer);
+            byteBuffer.clear();
+            byteBuffer.append(oddData);
         }
     }
 }
@@ -87,21 +88,22 @@ QVariantList DeviceTest::getAvailPortNames(void)
     return portNameList;
 }
 
-bool DeviceTest::setSerialPort(const QVariant& portName, const QVariantList& portSetting)
+bool DeviceTest::setupSerialPort(const QVariant& portName, const QVariantList& portSetting)
 {
     qDebug() << "start setSerialPort";
+    serialPort.setPortName(portName.toString());
+    serialPort.setBaudRate(QSerialPort::Baud115200);
+    serialPort.setDataBits(QSerialPort::Data8);
+    serialPort.setStopBits(QSerialPort::OneStop);
+    serialPort.setParity(QSerialPort::NoParity);
     return false;
 }
 
 bool DeviceTest::openSerialPort(const QVariant& portName)
 {
     qDebug() << "start openSerialPort";
-    serialPort.setPortName(portName.toString());
-    serialPort.setBaudRate(QSerialPort::Baud115200);
-    serialPort.setDataBits(QSerialPort::Data8);
-    serialPort.setStopBits(QSerialPort::OneStop);
-    serialPort.setParity(QSerialPort::NoParity);
 
+    setupSerialPort(portName, QVariantList());
     deviceStatus = OPEN;
     return serialPort.open(QSerialPort::ReadWrite);
 }
@@ -208,7 +210,6 @@ QVariantList DeviceTest::extractRealData(QByteArray& buffer)
 //    qDebug() << "start data extract: " << buffer;
 
     QVariantList result;
-    uchar headFlag1 = 0xaa, headFlag2 = 0x55;
     const int wndSize = 20, dataUnitLen = wndSize - 2;
     uchar oddData[20] = "";
 
@@ -216,7 +217,7 @@ QVariantList DeviceTest::extractRealData(QByteArray& buffer)
 
     for (int begin = 0, end = buffer.size() - wndSize; begin < end; ++begin)
     {
-        if (wndPtr[dataUnitLen] == headFlag1 && wndPtr[dataUnitLen+1] == headFlag2)
+        if (wndPtr[dataUnitLen] == packHeadFlag1 && wndPtr[dataUnitLen+1] == packHeadFlag2)
         {
             uchar rawdata[20] = "";
             memcpy_s(rawdata, 20, wndPtr, dataUnitLen);
@@ -236,6 +237,44 @@ QVariantList DeviceTest::extractRealData(QByteArray& buffer)
     buffer.append((char*)oddData);
 
     return result;
+}
+
+int DeviceTest::judgeDeviceChannelNum(const QByteArray& data)
+{
+    static std::map<int, int> channelNumMap{
+        std::pair<int, int>(18, 2),
+        std::pair<int, int>(27, 8),
+        std::pair<int, int>(51, 16),
+        std::pair<int, int>(99, 32)
+    };
+
+    int firstFlagPos = -1;
+    for (int begin = 0, end = data.size()-1; begin < end; ++begin){
+        if (data[begin] == packHeadFlag1 && data[begin+1] == packHeadFlag2){
+            if (firstFlagPos == -1){
+                firstFlagPos = begin;
+            }else{
+                int packLen = begin - firstFlagPos;
+                return channelNumMap.count(packLen) > 0 ? channelNumMap[packLen] : -1;
+            }
+        }
+    }
+
+    return -1;
+}
+
+QByteArray DeviceTest::dataTransferMainProcess(QByteArray buffer)
+{
+    if (deviceChannelNum == -1){
+        deviceChannelNum = judgeDeviceChannelNum(buffer);
+        return QByteArray();
+    }
+
+    QVariantList data = extractRealData(buffer);
+    dataFilemgr.writeFile(data);
+    emit deviceReadyRead(data);
+
+    return QByteArray();
 }
 
 int DeviceTest::openDataFile(const QVariant& fileName)

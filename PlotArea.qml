@@ -9,6 +9,10 @@ Rectangle {
     property real channelTitleHeight: height / channelNum
     property var channelStateList: []
     property var channelBaselineList: []
+    property int channelBaselineOffset: 0
+
+    property var prePoints: []
+    property var curPoints: []
 
     Component{
         id: channelTitleLabel
@@ -16,7 +20,6 @@ Rectangle {
         Rectangle{
             width: channelNameColumnArea.width
             height: channelTitleHeight
-//            border.color: "#000"
 
             property int channelIndex: -1
 
@@ -40,7 +43,6 @@ Rectangle {
 
             width: channelSelectColumnArea.width
             height: channelTitleHeight
-//            border.color: "#000"
 
             CheckBox{
                 checked: true;
@@ -59,7 +61,7 @@ Rectangle {
         channelBaselineList = []
         for(var begin = 0; begin < channelNum; ++begin){
             if (begin === 0){
-                channelBaselineList[begin] = baselineY - 5
+                channelBaselineList[begin] = baselineY + channelBaselineOffset
             }else{
                 channelBaselineList[begin] = channelBaselineList[begin-1] + channelTitleHeight
             }
@@ -82,9 +84,16 @@ Rectangle {
         onWidthChanged:{
             width = parent.width * 0.96
         }
+
         onHeightChanged:{
-            height =  (parent.height - 40) * 0.96
+            height = (parent.height - 40) * 0.96
             clacChannelBaseline()
+        }
+
+        onChannelDataUpdate: {
+            prePoints = curPoints
+            curPoints = newData
+            channelPlotCanvas.paint(null)
         }
     }
 
@@ -120,49 +129,42 @@ Rectangle {
                 renderStrategy: Canvas.Threaded
                 property real maxX: width
                 property real curX: 0
+                property real xOffset: 3
+                property real clearWidth: 50
 
-                property var prePoints: [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
-                property var curPoints: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-
-                Timer {
-                  interval: 100; running: true; repeat: true
-                  onTriggered: channelPlotCanvas.paint(null)
-                }
-
-                function makeWhite(ctx, x, y, w, h) {
-//                    ctx.strokeStyle = "#FFF"
-//                    ctx.beginPath();
-//                    ctx.rect(x, y, w, h);
-//                    ctx.closePath();
-//                    ctx.stroke()
+                function clearCanvas(ctx, x) {
+                    var clearStartX = x + 1
+                    clearStartX = clearStartX >= maxX || x <= 0 ? 0 : clearStartX
                     ctx.fillStyle="#FFF";
                     ctx.beginPath();
-                    ctx.fillRect(x,y,w,h);
+                    ctx.fillRect(clearStartX, 0, clearWidth, channelPlotCanvas.height);
                     ctx.closePath();
                 }
 
                 onPaint: {
-                    console.log('dwa')
-                    if (curX >= maxX) curX = 0
-                    var context = getContext('2d')
+                    if (curPoints === [] || prePoints === []) return
 
-                    for (var begin = 0; begin < channelNum;++begin){
+                    var context = getContext('2d')
+                    if (curX <= 0){
+                        clearCanvas(context, curX)
+                        curX += xOffset
+                        return
+                    }
+
+                    curX = curX >= maxX ? 0 : curX
+                    for (var begin = 0, end = prePoints.length; begin < end; ++begin){
+                        if (begin >= curPoints.length) break
+
                         if (channelStateList[begin]){
-                            context.moveTo(curX-2, prePoints[begin] + channelBaselineList[begin])
+                            context.moveTo(curX-xOffset, prePoints[begin] + channelBaselineList[begin])
                             context.lineTo(curX, curPoints[begin] + channelBaselineList[begin])
                         }
                     }
                     context.stroke()
+                    clearCanvas(context, curX)
 
-                    var clearStartX = curX + 1
-                    if (clearStartX >= maxX) clearStartX = 0
-                    makeWhite(context, clearStartX, 0, 50, channelPlotCanvas.height)
-
-                    curX+=10
+                    curX += xOffset
                     markDirty()
-                    var tmp = prePoints
-                    prePoints = curPoints
-                    curPoints = tmp
                 }
             }
         }

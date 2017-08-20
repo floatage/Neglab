@@ -17,6 +17,9 @@ Rectangle{
     //0: closed  1: search  2: pause 3:data
     property int deviceStatus: 0
     property var gatherInfor: null
+    property int channelNum: 16
+
+    signal channelDataUpdate(var newData)
 
     function gatherMainProcess(){
 //        if (plotPanel.plotStatus === 0){
@@ -29,7 +32,8 @@ Rectangle{
 //                plotPanel.plotStatus = 1
 //                deviceStartIcon.item.imgSource = "/img/pause.png"
 //                DeviceTestManager.startDataTransfer()
-//                createPlotArea(DeviceTestManager.getChannelNum())
+//                channelNum = DeviceTestManager.getChannelNum()
+//                createPlotArea(channelNum)
 //            }
 //        }
 //        else if(plotPanel.plotStatus === 1){
@@ -44,7 +48,19 @@ Rectangle{
 //            plotPanel.deviceStatus = 3
 //            DeviceTestManager.startDataTransfer()
 //        }
-        createPlotArea(DeviceTestManager.getChannelNum())
+        createPlotArea(channelNum)
+    }
+
+    Timer {
+        interval: 100; running: true; repeat: true
+        onTriggered: {
+            var newData = []
+            for(var begin = 0, end = channelNum; begin < end; ++begin){
+                newData.push((Math.random() > 0.5 ? 1 : -1) * Math.random() * 10 )
+            }
+
+            channelDataUpdate(newData)
+        }
     }
 
     Connections{
@@ -61,9 +77,13 @@ Rectangle{
                 }
             }
             else if (plotPanel.deviceStatus === 3){
-                console.log(readData)
+               plotRecvData(readData)
             }
         }
+    }
+
+    function plotRecvData(recvData){
+        channelDataUpdate(recvData)
     }
 
     function createPlotArea(channelNum){
@@ -375,15 +395,5 @@ Rectangle{
             color: "#66FFFF"
         }
     }
-
-//    PlotArea{
-//        id: plotArea
-//        width: parent.width * 0.96
-//        height: (parent.height - plotAreaToolBar.height) * 0.96
-//        anchors.left: parent.left
-//        anchors.leftMargin: parent.width * 0.02
-//        anchors.top: plotAreaToolBar.bottom
-//        anchors.topMargin: (parent.height - plotAreaToolBar.height) * 0.02
-//    }
 }
 
