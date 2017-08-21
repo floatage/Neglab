@@ -5,7 +5,6 @@ CONFIG += c++11
 
 SOURCES += main.cpp \
     devicetest.cpp \
-    datafilemanager.cpp \
     rawdatahandlemanager.cpp \
     datahandler.cpp
 
@@ -19,7 +18,6 @@ include(deployment.pri)
 
 HEADERS += \
     devicetest.h \
-    datafilemanager.h \
     rawdatahandlemanager.h \
     datahandler.h
 

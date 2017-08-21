@@ -2,14 +2,11 @@
 #include <QSerialPortInfo>
 #include <QDebug>
 
-#include "datafilemanager.cpp"
-
 DeviceTest* DeviceTest::instance = nullptr;
 DeviceTest::DeviceTest(QObject *parent)
-    : QObject(parent), serialPort(), deviceStatus(CLOSED), dataFilemgr("tmp.txt"), deviceChannelNum(-1),
+    : QObject(parent), serialPort(), deviceStatus(CLOSED), deviceChannelNum(-1),
       packHeadFlag1(0xaa), packHeadFlag2(0x55)
 {
-    dataFilemgr.start();
     connect(&serialPort, SIGNAL(readyRead()), SLOT(handleReadyRead()));
     connect(&serialPort, SIGNAL(error(QSerialPort::SerialPortError)), SLOT(handleError(QSerialPort::SerialPortError)));
 }
@@ -205,40 +202,6 @@ int DeviceTest::finishDataTransfer()
     return 1;
 }
 
-QVariantList DeviceTest::extractRealData(QByteArray& buffer)
-{
-//    qDebug() << "start data extract: " << buffer;
-
-    QVariantList result;
-    const int wndSize = 20, dataUnitLen = wndSize - 2;
-    uchar oddData[20] = "";
-
-    uchar* wndPtr = (uchar*)buffer.data();
-
-    for (int begin = 0, end = buffer.size() - wndSize; begin < end; ++begin)
-    {
-        if (wndPtr[dataUnitLen] == packHeadFlag1 && wndPtr[dataUnitLen+1] == packHeadFlag2)
-        {
-            uchar rawdata[20] = "";
-            memcpy_s(rawdata, 20, wndPtr, dataUnitLen);
-            for (int pos = 0, end = dataUnitLen / 3; pos < end; ++pos){
-               result.append((((uint)rawdata[pos * 3 + 1]) << 8) + (uint)rawdata[pos * 3 + 2]);
-            }
-
-            wndPtr += 20;
-        }
-        else
-        {
-            wndPtr += 1;
-        }
-        memcpy_s(oddData, dataUnitLen, wndPtr, dataUnitLen);
-    }
-    buffer.clear();
-    buffer.append((char*)oddData);
-
-    return result;
-}
-
 int DeviceTest::judgeDeviceChannelNum(const QByteArray& data)
 {
     static std::map<int, int> channelNumMap{
@@ -270,21 +233,12 @@ QByteArray DeviceTest::dataTransferMainProcess(QByteArray buffer)
         return QByteArray();
     }
 
-    QVariantList data = extractRealData(buffer);
-    dataFilemgr.writeFile(data);
-    emit deviceReadyRead(data);
-
     return QByteArray();
 }
 
 int DeviceTest::openDataFile(const QVariant& fileName)
 {
     qDebug() << "start open data file";
-    return -1;
-}
-
-int DeviceTest::saveExtractedDataToFile(const QVariant& fileName, char* data)
-{
     return -1;
 }
 

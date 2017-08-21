@@ -7,8 +7,6 @@
 #include <QString>
 #include <QVector>
 
-#include "datafilemanager.h"
-
 class QSerialPort;
 class DeviceTest : public QObject
 {
@@ -57,16 +55,12 @@ private:
     QByteArray byteBuffer;
 
     DeviceStatus deviceStatus;
-    DataFileManager dataFilemgr;
     int deviceChannelNum;
 
     const uchar packHeadFlag1, packHeadFlag2;
 
     int judgeDeviceChannelNum(const QByteArray& data);
     QByteArray dataTransferMainProcess(QByteArray buffer);
-
-    QVariantList extractRealData(QByteArray& buffer);
-    int saveExtractedDataToFile(const QVariant& fileName, char* data);
 };
 
 #endif // DEVICETEST_H

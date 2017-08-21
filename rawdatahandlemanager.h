@@ -39,13 +39,24 @@ public:
     ~DataSampler(){}
 };
 
-class DataFilter: public DataHandler
+class DataResolver: public DataHandler
 {
 public:
     void init(const QVariant&){}
     void handle(QVariant& data) = 0;
     void clear(){}
     int priority(){ return 7000;}
+    int identifier() = 0;
+    ~DataResolver(){}
+};
+
+class DataFilter: public DataHandler
+{
+public:
+    void init(const QVariant&){}
+    void handle(QVariant& data) = 0;
+    void clear(){}
+    int priority(){ return 10000;}
     int identifier() = 0;
     ~DataFilter(){}
 };
@@ -56,7 +67,7 @@ public:
     void init(const QVariant&){}
     void handle(QVariant& data) = 0;
     void clear(){}
-    int priority(){ return 10000;}
+    int priority(){ return 13000;}
     int identifier() = 0;
     ~DataCutter(){}
 };
@@ -64,6 +75,8 @@ public:
 class ExecuteObject: public QThread
 {
 public:
+    virtual void init(const QVariant&) = 0;
+    virtual void clear() = 0;
     virtual void execute(QVariant params) = 0;
     virtual int identifier() = 0;
     virtual ~ExecuteObject(){}

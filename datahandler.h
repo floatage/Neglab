@@ -6,6 +6,10 @@
 #include <QVector>
 #include <QByteArray>
 #include <unordered_map>
+#include <QVariant>
+#include <QFile>
+#include <QString>
+#include <QMutex>
 
 class DataExtracter_RemainHandle: public DataExtracter
 {
@@ -27,9 +31,11 @@ private:
     int controlDataLen;
     int dataLen;
     int packLen;
+    int channelDataLen;
 
     inline bool isArriveHeadFlag(uchar* pos);
     inline void createDataPack(uchar* pos, QVariantList& container);
+    inline int byteToInt(uchar* head, int len);
 };
 
 class DataSampler_DownSampler: public DataSampler
@@ -42,7 +48,7 @@ public:
 
 private:
     int fetchInterval;
-    QVariant buffer;
+    QVariant remainData;
 };
 
 class DataFilter_LowpassFilter: public DataFilter
@@ -59,20 +65,27 @@ public:
     int identifier(){return 2;}
 };
 
-class DataCutter_Noraml: public DataCutter
-{
-public:
-    void handle(QVariant& data);
-    int identifier(){return 1;}
-};
-
 class CSVWriter: public ExecuteObject
 {
 public:
-    void execute(QVariant params);
+    CSVWriter(const QString& iFilename, int iChannelNum);
+    ~CSVWriter();
+
+    void init(const QVariant & param);
+    void clear();
+
+    void stop();
+    void execute(const QVariant& params);
     int identifier(){return 1;}
 
 private:
+    int channelNum;
+    QVariant buffer;
+    QString fileName;
+    QMutex signal;
+    bool isRuning;
+    QFile file;
+
     void run();
 };
 

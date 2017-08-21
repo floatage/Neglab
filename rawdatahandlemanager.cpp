@@ -24,7 +24,7 @@ void RawDataHandleManager::handle(QVariant& data)
         QPair<ExecutorMap::iterator, ExecutorMap::iterator> hooks = intermediateResultHook.equal_range((*begin)->priority() + (*begin)->identifier());
         while (hooks.first != hooks.second){
             (*hooks.first)->execute(data);
-            ++hooks.second;
+            ++hooks.first;
         }
     }
 }
