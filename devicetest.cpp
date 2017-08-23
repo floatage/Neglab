@@ -2,9 +2,11 @@
 #include <QSerialPortInfo>
 #include <QDebug>
 
+#include "datahandler.h"
+
 DeviceTest* DeviceTest::instance = nullptr;
 DeviceTest::DeviceTest(QObject *parent)
-    : QObject(parent), serialPort(), deviceStatus(CLOSED), deviceChannelNum(-1),
+    : QObject(parent), serialPort(), deviceStatus(CLOSED), deviceChannelNum(-1), rawDataHandleMgr(NULL),
       packHeadFlag1(0xaa), packHeadFlag2(0x55)
 {
     connect(&serialPort, SIGNAL(readyRead()), SLOT(handleReadyRead()));
@@ -31,7 +33,7 @@ void DeviceTest::handleReadyRead()
     if (deviceStatus == OPEN)
     {
         strBuffer.append(serialPort.readAll());
-        qDebug() << "handle buffer before" << strBuffer;
+//        qDebug() << "handle buffer before" << strBuffer;
 
         QStringList lines = strBuffer.split("\r\n");
         if (lines.size() != 1)
@@ -48,21 +50,26 @@ void DeviceTest::handleReadyRead()
             strBuffer.clear();
         }
 
-        qDebug() << "handle buffer after" << strBuffer;
+//        qDebug() << "handle buffer after" << strBuffer;
     }
     else if (deviceStatus == PAUSE)
     {
-
     }
     else if (deviceStatus == DATATRANSFER)
     {
-        byteBuffer.append(serialPort.readAll());
+        QVariantMap tt;
+        QVariantList test;
+        test.append(1);
+        test.append(2);
+        tt.insert("0", test);
+        tt.insert("1", test);
+        emit deviceReadyRead(QVariant(tt));
+//        byteBuffer.append(serialPort.readAll());
 
-        if (byteBuffer.size() > 128){
-            QByteArray oddData = dataTransferMainProcess(byteBuffer);
-            byteBuffer.clear();
-            byteBuffer.append(oddData);
-        }
+//        if (byteBuffer.size() > 128){
+//            dataTransferMainProcess(byteBuffer);
+//            byteBuffer.clear();
+//        }
     }
 }
 
@@ -226,14 +233,19 @@ int DeviceTest::judgeDeviceChannelNum(const QByteArray& data)
     return -1;
 }
 
-QByteArray DeviceTest::dataTransferMainProcess(QByteArray buffer)
+void DeviceTest::dataTransferMainProcess(const QByteArray& buffer)
 {
     if (deviceChannelNum == -1){
         deviceChannelNum = judgeDeviceChannelNum(buffer);
-        return QByteArray();
+        rawDataHandleMgr = RawDataHandleManager::getInstance();
+        rawDataHandleMgr->addHandler(new DataExtracter_RemainHandle(deviceChannelNum));
+        rawDataHandleMgr->addHandler(new DataSampler_DownSampler(100));
+        rawDataHandleMgr->addHandler(new DataFilter_IIR(10, deviceChannelNum, QVector<float>(), QVector<float>()));
+        rawDataHandleMgr->addIntermediateResultHook(4000, 1, new CSVWriter("", deviceChannelNum));
+        rawDataHandleMgr->addIntermediateResultHook(10000, 1, new CSVWriter("", deviceChannelNum));
     }
 
-    return QByteArray();
+    rawDataHandleMgr->handle(buffer);
 }
 
 int DeviceTest::openDataFile(const QVariant& fileName)

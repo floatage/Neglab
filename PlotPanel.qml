@@ -22,44 +22,32 @@ Rectangle{
     signal channelDataUpdate(var newData)
 
     function gatherMainProcess(){
-//        if (plotPanel.plotStatus === 0){
-//            if (plotPanel.deviceStatus === 0){
-//                DeviceTestManager.openSerialPort(plotPanel.gatherInfor.port)
-//                DeviceTestManager.sendDataToPort("AT:GS")
-//                plotPanel.deviceStatus = 1
-//            }
-//            else if(plotPanel.deviceStatus === 3){
-//                plotPanel.plotStatus = 1
-//                deviceStartIcon.item.imgSource = "/img/pause.png"
-//                DeviceTestManager.startDataTransfer()
-//                channelNum = DeviceTestManager.getChannelNum()
-//                createPlotArea(channelNum)
-//            }
-//        }
-//        else if(plotPanel.plotStatus === 1){
-//            plotPanel.plotStatus = 2
-//            deviceStartIcon.item.imgSource = "/img/start.png"
-//            DeviceTestManager.pauseDataTransfer()
-//            plotPanel.deviceStatus = 2
-//        }
-//        else if(plotPanel.plotStatus === 2){
-//            plotPanel.plotStatus = 1
-//            deviceStartIcon.item.imgSource = "/img/pause.png"
-//            plotPanel.deviceStatus = 3
-//            DeviceTestManager.startDataTransfer()
-//        }
-        createPlotArea(channelNum)
-    }
-
-    Timer {
-        interval: 100; running: true; repeat: true
-        onTriggered: {
-            var newData = []
-            for(var begin = 0, end = channelNum; begin < end; ++begin){
-                newData.push((Math.random() > 0.5 ? 1 : -1) * Math.random() * 10 )
+        if (plotPanel.plotStatus === 0){
+            if (plotPanel.deviceStatus === 0){
+                DeviceTestManager.openSerialPort(plotPanel.gatherInfor.port)
+                DeviceTestManager.sendDataToPort("AT:GS")
+                plotPanel.deviceStatus = 1
             }
-
-            channelDataUpdate(newData)
+            else if(plotPanel.deviceStatus === 3){
+                plotPanel.plotStatus = 1
+                deviceStartIcon.item.imgSource = "/img/pause.png"
+                DeviceTestManager.startDataTransfer()
+                channelNum = DeviceTestManager.getChannelNum()
+                channelNum = channelNum === -1 ? 32 : channelNum
+                createPlotArea(channelNum)
+            }
+        }
+        else if(plotPanel.plotStatus === 1){
+            plotPanel.plotStatus = 2
+            deviceStartIcon.item.imgSource = "/img/start.png"
+            DeviceTestManager.pauseDataTransfer()
+            plotPanel.deviceStatus = 2
+        }
+        else if(plotPanel.plotStatus === 2){
+            plotPanel.plotStatus = 1
+            deviceStartIcon.item.imgSource = "/img/pause.png"
+            plotPanel.deviceStatus = 3
+            DeviceTestManager.startDataTransfer()
         }
     }
 
@@ -76,14 +64,21 @@ Rectangle{
                     gatherMainProcess()
                 }
             }
-            else if (plotPanel.deviceStatus === 3){
-               plotRecvData(readData)
-            }
+//            else if (plotPanel.deviceStatus === 3){  //进入数据交换模式后数据信号交由RawDataHandleManager处理发送
+//                for (var begin = 0, end = Object.keys(readData).length; begin < end; ++begin){
+//                    channelDataUpdate(readData[""+begin])
+//                }
+//            }
         }
     }
 
-    function plotRecvData(recvData){
-        channelDataUpdate(recvData)
+    Connections{
+        target: RawDataHandleManager
+        onDataHandleFinished: {
+            for (var begin = 0, end = Object.keys(plotData).length; begin < end; ++begin){
+                channelDataUpdate(plotData[""+begin])
+            }
+        }
     }
 
     function createPlotArea(channelNum){
@@ -266,10 +261,10 @@ Rectangle{
                     Connections{
                         target: deviceStartIcon.item
                         onIconClicked: {
-//                            if (plotPanel.gatherInfor === null){
-//                                inforIcon.item.iconClicked()
-//                                return
-//                            }
+                            if (plotPanel.gatherInfor === null){
+                                inforIcon.item.iconClicked()
+                                return
+                            }
 
                             gatherMainProcess()
                         }

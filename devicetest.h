@@ -7,6 +7,8 @@
 #include <QString>
 #include <QVector>
 
+#include "rawdatahandlemanager.h"
+
 class QSerialPort;
 class DeviceTest : public QObject
 {
@@ -56,11 +58,12 @@ private:
 
     DeviceStatus deviceStatus;
     int deviceChannelNum;
+    RawDataHandleManager* rawDataHandleMgr;
 
     const uchar packHeadFlag1, packHeadFlag2;
 
     int judgeDeviceChannelNum(const QByteArray& data);
-    QByteArray dataTransferMainProcess(QByteArray buffer);
+    void dataTransferMainProcess(const QByteArray& buffer);
 };
 
 #endif // DEVICETEST_H

@@ -20,6 +20,8 @@ DataExtracter_RemainHandle::~DataExtracter_RemainHandle()
 
 void DataExtracter_RemainHandle::init(const QVariant& param)
 {
+    if (channelNum <= 0) throw std::exception("invalid channel number");
+
     channelNum = param.toInt();
     remainData.swap(QByteArray());
     channelDataLen = channelControlDict[channelNum][3];
@@ -99,9 +101,11 @@ DataSampler_DownSampler::DataSampler_DownSampler(int sampleRate)
 }
 
 void DataSampler_DownSampler::init(const QVariant &param)
-{
+{   
     fetchInterval = 100 / param.toInt();
     remainData.swap(QVariant());
+
+    if (fetchInterval < 0 || fetchInterval > 100) throw std::exception("invalid sample");
 }
 
 void DataSampler_DownSampler::handle(QVariant& data)
@@ -129,13 +133,100 @@ void DataSampler_DownSampler::handle(QVariant& data)
     data.swap(QVariant(result));
 }
 
-void DataFilter_LowpassFilter::handle(QVariant& data)
-{
+//内联函数通常定义在头文件中，因其为编译器期行为。并且通过函数指针调用时会生成函数体
+//因若无函数体则无法使用函数指针调用函数，并且调试器可能无法调试内联函数，内联函数升级时必须编译
+//则下面函数定义实际得不到想要的效果
+//inline float dataMap_channel2(int x, float){
+//   // (x - 2^16) / 2^16
+//   return  (x - 65536.0f) / 65536.0f;
+//}
 
+float dataMap_channel2(int x, float){
+   // (x - 2^16) / 2^16
+   return  (x - 65536.0f) / 65536.0f;
 }
 
-void DataFilter_HighpassFilter::handle(QVariant& data){
+float dataMap_channel8(int x, float gain){
+    // (x - 2^16) / 2^16 * 2.0*10^6
+    return (x - 65536.0f) / 65536.0f * 2000000.0f / gain;
+}
 
+float dataMap_channel16(int x, float gain){
+    // (x - 2^24) / 2^24 * 2.0*10^6
+    return (x - 16777216.0f) / 16777216.0f * 2000000.0f / gain;
+}
+
+float dataMap_channel32(int x, float gain){
+    // (x - 2^24) / 2^24 * 2.0*10^6
+    return (x - 16777216.0f) / 16777216.0f * 2000000.0f / gain;
+}
+
+DataFilter_IIR::DataFilter_IIR(int iBufferLen, int iChannelNum, const QVector<float> &ia, const QVector<float> &ib)
+    :bufferLen(iBufferLen), channelNum(iChannelNum), a(ia), b(ib), channelHistoryList(), dataMapFuncPtr(NULL)
+{
+    if (iBufferLen <= 0 || iChannelNum <= 0 || ia.size() < iBufferLen || ib.size() < iBufferLen) throw std::exception("invalid params");
+
+    for (int begin = 0; begin < channelNum; ++begin){
+        QVector<float>* u = new QVector<float>(bufferLen, 0.0f);
+        channelHistoryList.append(u);
+    }
+    dataMapFuncPtr = getMatchDataMapFuncPtr(channelNum);
+}
+
+DataFilter_IIR::~DataFilter_IIR()
+{
+    for (int begin = 0; begin < channelNum; ++begin){
+        delete channelHistoryList[begin];
+    }
+}
+
+DataFilter_IIR::DataMapFuncPtr DataFilter_IIR::getMatchDataMapFuncPtr(int channelNum)
+{
+    switch (channelNum) {
+        case 2:
+            return &dataMap_channel2;
+        case 8:
+            return &dataMap_channel8;
+        case 16:
+            return &dataMap_channel16;
+        case 32:
+            return &dataMap_channel32;
+        default:
+            return NULL;
+    }
+}
+
+void DataFilter_IIR::handle(QVariant& data)
+{
+    QVariantList *dataPtr = NULL;
+    data.convert(QVariant::List, dataPtr);
+
+    for (int packCounter = 0, packSize = dataPtr->size(); packCounter < packSize; ++packCounter)
+    {
+        QVariantList* packPtr = NULL;
+        dataPtr->at(packCounter).convert(QVariant::List, packPtr);
+
+        //通道0表示控制信号，不做滤波
+        for (int channelCounter = 1, validChannelNum = packPtr->size(); channelCounter < validChannelNum; ++channelCounter)
+        {
+            float value = (*dataMapFuncPtr)(packPtr->at(channelCounter).toInt(), 1.0);
+
+            for (int begin = 1, end = a.size(); begin != end; ++begin){
+                value -= a[begin] * channelHistoryList[channelCounter]->at((bufferWritePos + begin) %  bufferLen);
+            }
+
+            channelHistoryList[channelCounter]->replace(bufferWritePos, value);
+
+            value = 0.0;
+            for (int begin = 0, end = b.size(); begin != end; ++begin){
+                value += b[begin] * channelHistoryList[channelCounter]->at((bufferWritePos + begin) %  bufferLen);
+            }
+
+            packPtr->replace(channelCounter, value);
+        }
+
+        bufferWritePos = (bufferWritePos + bufferLen - 1) % bufferLen;
+    }
 }
 
 CSVWriter::CSVWriter(const QString &iFilename, int iChannelNum)
@@ -161,9 +252,7 @@ void CSVWriter::init(const QVariant &param)
     file.open(QIODevice::WriteOnly | QIODevice::Text);
     buffer.swap(QVariant());
     channelNum = params[1].toInt();
-    signal.lock();
-    isRuning = true;
-    this->start();
+    canRun = true;
 }
 
 void CSVWriter::clear()
@@ -174,8 +263,10 @@ void CSVWriter::clear()
 
 void CSVWriter::execute(const QVariant& params)
 {
+    lock.lock();
     buffer.setValue(params);
-    signal.unlock();
+    signal.wakeOne();
+    lock.unlock();
 }
 
 void CSVWriter::run(){
@@ -187,25 +278,38 @@ void CSVWriter::run(){
     }
     out << endl;
 
-    while(isRuning){
-        signal.lock();
+    while(true)
+    {
+        lock.lock();
+        signal.wait(&lock);
+
+        if (!canRun){
+            lock.unlock();
+            break;
+        }
+
         QVariantList* dataList = NULL;
         buffer.convert(QVariant::List, dataList);
-        for (int begin = 0; begin < dataList->size(); ++begin){
+        for (int begin = 0; begin < dataList->size(); ++begin)
+        {
             QVariantList* dataPack = NULL;
             dataList->at(begin).convert(QVariant::List, dataPack);
-            for (int channelCounter = 0, validChannleNum = dataPack->size(); channelCounter < validChannleNum; ++channelCounter){
+            for (int channelCounter = 0, validChannleNum = dataPack->size(); channelCounter < validChannleNum; ++channelCounter)
+            {
                out << dataPack->at(channelCounter).toInt() << ',';
             }
         }
         out << '\n';
         out.flush();
-        signal.lock();
+
+        lock.unlock();
     }
 }
 
 void CSVWriter::stop()
 {
-    isRuning = false;
-    signal.unlock();
+    lock.lock();
+    canRun = false;
+    signal.wakeOne();
+    lock.unlock();
 }

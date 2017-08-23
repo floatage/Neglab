@@ -64,7 +64,7 @@ Rectangle{
                             comboBoxWidth: parent.width * 0.7
                             anchors.verticalCenter: parent.verticalCenter
 
-                            comboxModel: ['Neg']
+                            comboxModel: ['CSV']
                         }
                     }
                 }

@@ -5,6 +5,9 @@
 #include <QList>
 #include <QMultiMap>
 #include <QThread>
+#include <QMutex>
+#include <QWaitCondition>
+#include <QObject>
 
 class DataHandler
 {
@@ -77,17 +80,25 @@ class ExecuteObject: public QThread
 public:
     virtual void init(const QVariant&) = 0;
     virtual void clear() = 0;
-    virtual void execute(QVariant params) = 0;
+    virtual void execute(const QVariant& params) = 0;
     virtual int identifier() = 0;
     virtual ~ExecuteObject(){}
 };
 
-class RawDataHandleManager
+class RawDataHandleManager: public QThread
 {
+    Q_OBJECT
 public:
     ~RawDataHandleManager();
 
-    void handle(QVariant& data);
+    static RawDataHandleManager* getInstance();
+
+    void run();
+    void stop();
+    void init();
+    void clear();
+    void handle(const QByteArray& data);
+
     bool addHandler(DataHandler* handler);
     bool deleteHandler(int priority, int identifier);
 
@@ -102,8 +113,17 @@ private:
     RawDataHandleManager(const RawDataHandleManager&);
     RawDataHandleManager& operator =(const RawDataHandleManager&);
 
+    static RawDataHandleManager* instance;
+
+    bool canRun;
+    QMutex lock;
+    QVariant buffer;
+    QWaitCondition signal;
     HandlerList dataHandlerChain;
     ExecutorMap intermediateResultHook;
+
+signals:
+    void dataHandleFinished(QVariant plotData);
 };
 
 #endif // RAWDATAHANDLEMANAGER_H

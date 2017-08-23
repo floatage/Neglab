@@ -10,6 +10,7 @@
 #include <QFile>
 #include <QString>
 #include <QMutex>
+#include <QWaitCondition>
 
 class DataExtracter_RemainHandle: public DataExtracter
 {
@@ -51,18 +52,26 @@ private:
     QVariant remainData;
 };
 
-class DataFilter_LowpassFilter: public DataFilter
+class DataFilter_IIR: public DataFilter
 {
 public:
+    DataFilter_IIR(int iBufferLen, int iChannelNum, const QVector<float> &ia, const QVector<float> &ib);
+    ~DataFilter_IIR();
     void handle(QVariant& data);
     int identifier(){return 1;}
-};
 
-class DataFilter_HighpassFilter: public DataFilter
-{
-public:
-    void handle(QVariant& data);
-    int identifier(){return 2;}
+private:
+    typedef float (*DataMapFuncPtr)(int, float);
+    DataMapFuncPtr getMatchDataMapFuncPtr(int channelNum);
+
+    QVector<float> a;
+    QVector<float> b;
+    QVector<QVector<float>*> channelHistoryList;
+    int bufferLen;
+    int bufferWritePos;
+    int channelNum;
+    float gain;
+    DataMapFuncPtr dataMapFuncPtr;
 };
 
 class CSVWriter: public ExecuteObject
@@ -82,8 +91,9 @@ private:
     int channelNum;
     QVariant buffer;
     QString fileName;
-    QMutex signal;
-    bool isRuning;
+    QMutex lock;
+    QWaitCondition signal;
+    bool canRun;
     QFile file;
 
     void run();
