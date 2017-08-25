@@ -1,9 +1,6 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QtQml>
-
-#include <QSerialPort>
-#include <QSerialPortInfo>
 #include <QDebug>
 
 #include "devicetest.h"

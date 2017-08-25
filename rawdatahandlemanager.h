@@ -4,10 +4,9 @@
 #include <QVariant>
 #include <QList>
 #include <QMultiMap>
-#include <QThread>
-#include <QMutex>
-#include <QWaitCondition>
 #include <QObject>
+#include <QQueue>
+#include <QThread>
 
 class DataHandler
 {
@@ -85,7 +84,7 @@ public:
     virtual ~ExecuteObject(){}
 };
 
-class RawDataHandleManager: public QThread
+class RawDataHandleManager: public QObject
 {
     Q_OBJECT
 public:
@@ -93,11 +92,8 @@ public:
 
     static RawDataHandleManager* getInstance();
 
-    void run();
-    void stop();
     void init();
     void clear();
-    void handle(const QByteArray& data);
 
     bool addHandler(DataHandler* handler);
     bool deleteHandler(int priority, int identifier);
@@ -115,15 +111,15 @@ private:
 
     static RawDataHandleManager* instance;
 
-    bool canRun;
-    QMutex lock;
-    QVariant buffer;
-    QWaitCondition signal;
+    QQueue<QVariant> queue;
     HandlerList dataHandlerChain;
     ExecutorMap intermediateResultHook;
 
 signals:
-    void dataHandleFinished(QVariant plotData);
+    void getNextBuffer(QVariant plotData);
+
+public slots:
+    void handleDeviceByteBufferFilled(QVariant buffer);
 };
 
 #endif // RAWDATAHANDLEMANAGER_H

@@ -1,9 +1,10 @@
 #include "rawdatahandlemanager.h"
 #include <iterator>
+#include <QDebug>
 
 RawDataHandleManager* RawDataHandleManager::instance = NULL;
 RawDataHandleManager::RawDataHandleManager()
-    :dataHandlerChain(), intermediateResultHook(), lock(), signal(), buffer()
+    :dataHandlerChain(), intermediateResultHook()
 {
     init();
 }
@@ -16,12 +17,10 @@ RawDataHandleManager::~RawDataHandleManager()
 void RawDataHandleManager::init()
 {
     clear();
-    canRun = true;
 }
 
 void RawDataHandleManager::clear()
 {
-    stop();
     for(HandlerList::iterator begin = dataHandlerChain.begin(), end = dataHandlerChain.end(); begin != end; ++begin){
         delete (*begin);
     }
@@ -31,7 +30,6 @@ void RawDataHandleManager::clear()
         delete (*begin);
     }
     intermediateResultHook.swap(ExecutorMap());
-    buffer.swap(QVariant());
 }
 
 RawDataHandleManager* RawDataHandleManager::getInstance()
@@ -43,52 +41,22 @@ RawDataHandleManager* RawDataHandleManager::getInstance()
     return instance;
 }
 
-void RawDataHandleManager::handle(const QByteArray& data)
+void RawDataHandleManager::handleDeviceByteBufferFilled(QVariant buffer)
 {
-    if (!this->isRunning()){
-        this->start();
-        this->sleep(1);
-    }
-
-    lock.lock();
-    buffer.swap(QVariant(data));
-    signal.wakeOne();
-    lock.unlock();
-}
-
-void RawDataHandleManager::run()
-{
-    while(true)
+    for(HandlerList::iterator begin = dataHandlerChain.begin(), end = dataHandlerChain.end(); begin != end; ++begin)
     {
-        lock.lock();
-        signal.wait(&lock);
-
-        if (!canRun) {
-            lock.unlock();
-            break;
+        (*begin)->handle(buffer);
+        QPair<ExecutorMap::iterator, ExecutorMap::iterator> hooks = intermediateResultHook.equal_range((*begin)->priority() + (*begin)->identifier());
+        while (hooks.first != hooks.second){
+            (*hooks.first)->execute(buffer);
+            ++hooks.first;
         }
-
-        for(HandlerList::iterator begin = dataHandlerChain.begin(), end = dataHandlerChain.end(); begin != end; ++begin)
-        {
-            (*begin)->handle(buffer);
-            QPair<ExecutorMap::iterator, ExecutorMap::iterator> hooks = intermediateResultHook.equal_range((*begin)->priority() + (*begin)->identifier());
-            while (hooks.first != hooks.second){
-                (*hooks.first)->execute(buffer);
-                ++hooks.first;
-            }
-        }
-
-        emit dataHandleFinished(buffer);
-        lock.unlock();
+        qDebug() << QThread::currentThreadId() << "  "<<  (*begin)->priority()+(*begin)->identifier() << "handler handle finished;" << endl;
     }
-}
 
-void RawDataHandleManager::stop()
-{
-    lock.lock();
-    canRun = false;
-    signal.wakeOne();
-    lock.unlock();
+    qDebug() << QThread::currentThreadId() << "handle finished;Next" << endl;
+    emit getNextBuffer(buffer);
+//    emit dataHandleFinished(buffer);
 }
 
 bool RawDataHandleManager::addHandler(DataHandler* handler)

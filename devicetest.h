@@ -6,6 +6,8 @@
 #include <QVariant>
 #include <QString>
 #include <QVector>
+#include <QQueue>
+#include <QThread>
 
 #include "rawdatahandlemanager.h"
 
@@ -40,10 +42,14 @@ public:
 
 signals:
     void deviceReadyRead(QVariant readData);
+    void deviceJudgeFinished(void);
+    void deviceByteBufferFilled(const QVariant& buffer);
+    void plotDataReady(QVariant plotData);
 
 public slots:
     void handleReadyRead();
     void handleError(QSerialPort::SerialPortError error);
+    void handleGetNextBuffer(QVariant plotData);
 
 private:
     explicit DeviceTest(QObject *parent = 0);
@@ -55,12 +61,12 @@ private:
     QSerialPort serialPort;
     QString strBuffer;
     QByteArray byteBuffer;
+    QQueue<QVariant> byteBufferQueue;
 
     DeviceStatus deviceStatus;
     int deviceChannelNum;
     RawDataHandleManager* rawDataHandleMgr;
-
-    const uchar packHeadFlag1, packHeadFlag2;
+    QThread dataHandleThread;
 
     int judgeDeviceChannelNum(const QByteArray& data);
     void dataTransferMainProcess(const QByteArray& buffer);

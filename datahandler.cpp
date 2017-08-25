@@ -1,11 +1,12 @@
 #include "datahandler.h"
 #include <cstring>
-#include <QList>
 #include <QVariantList>
+#include <QVariantMap>
 #include <QTextStream>
+#include <QDebug>
 
 DataExtracter_RemainHandle::DataExtracter_RemainHandle(int iChannelNum)
-    : headFlag{0xaa, 0x55}, channelControlDict()
+    :channelControlDict()
 {
     channelControlDict[2] = {18, 16, 0, 2};
     channelControlDict[8] = {27, 25, 1, 3};
@@ -20,9 +21,9 @@ DataExtracter_RemainHandle::~DataExtracter_RemainHandle()
 
 void DataExtracter_RemainHandle::init(const QVariant& param)
 {
+    channelNum = param.toInt();
     if (channelNum <= 0) throw std::exception("invalid channel number");
 
-    channelNum = param.toInt();
     remainData.swap(QByteArray());
     channelDataLen = channelControlDict[channelNum][3];
     controlDataLen = channelControlDict[channelNum][2];
@@ -30,16 +31,17 @@ void DataExtracter_RemainHandle::init(const QVariant& param)
     packLen = channelControlDict[channelNum][0];
 }
 
-bool DataExtracter_RemainHandle::isArriveHeadFlag(uchar* pos)
-{
-    //不做空指针判断，外部保证指针合法
-    for (int begin = 0, end = headFlag.size(); begin != end; ++begin){
-        if (*(pos + packLen + begin) != headFlag[begin])
-            return true;
-    }
+//bool DataExtracter_RemainHandle::isArriveHeadFlag(uchar* pos)
+//{
+//    //不做空指针判断，外部保证指针合法
+//    printf("0x%x 0x%x\n",*(pos+packLen), *(pos+packLen+1));
+//    for (int begin = 0, end = headFlag.size(); begin != end; ++begin){
+//        if (*(pos + packLen + begin) != headFlag[begin])
+//            return false;
+//    }
 
-    return false;
-}
+//    return true;
+//}
 
 int DataExtracter_RemainHandle::byteToInt(uchar *head, int len)
 {
@@ -52,36 +54,48 @@ int DataExtracter_RemainHandle::byteToInt(uchar *head, int len)
 
 void DataExtracter_RemainHandle::createDataPack(uchar *pos, QVariantList& container)
 {
-    QByteArray controlData(0x00);
+    QByteArray controlData(controlDataLen, 0x00);
     std::memcpy(controlData.data(), pos, controlDataLen);
     pos += controlDataLen;
 
-    for (int begin = 0, end = dataLen / channelNum; begin != end; ++begin){
-        QList<QVariant> pack;
-        for (int channelCounter = 0; channelCounter < channelNum; ++channelCounter){
-            pack.append(byteToInt(pos, channelDataLen));
+    for (int begin = 0, end = dataLen / channelNum; begin != end; ++begin)
+    {
+        QVariantList dataPack;
+        for (int channelCounter = 0; channelCounter < channelNum; ++channelCounter)
+        {
+            dataPack.append(byteToInt(pos, channelDataLen));
             pos += channelDataLen;
         }
 
-        pack.push_front(controlData.toInt());
-        container.append(pack);
+        dataPack.push_front(controlData.toInt());
+        container.append(QVariant(dataPack));
     }
 }
 
 void DataExtracter_RemainHandle::handle(QVariant& data)
 {
+    static const uchar packHeadFlag1 = 0xaa, packHeadFlag2 = 0x55;
+
+    if (data.isNull()) return;
+
+    bool isFirst = true;
     QVariantList result;
     QByteArray rawData = remainData.append(data.toByteArray());
 
-    int remainDataSize = rawData.size() % packLen;
-    std::memcpy(remainData.data(), rawData.data() - remainDataSize, remainDataSize);
-    remainData.clear();
-
+    int remainDataSize = 0;
     uchar* posPtr = (uchar*)rawData.data();
     for (int begin = 0, end = rawData.size() - packLen - remainDataSize; begin < end; ++begin)
     {
-        if (isArriveHeadFlag(posPtr))
+        if (*(posPtr+packLen) == packHeadFlag1 && *(posPtr+packLen+1) == packHeadFlag2)
         {
+            if (isFirst){
+                int remainDataSize = (rawData.size()-begin) % packLen;
+                remainData.swap(QByteArray());
+                std::memcpy(remainData.data(), rawData.data() + rawData.size() - remainDataSize, remainDataSize);
+                isFirst = false;
+                end = rawData.size() - packLen - remainDataSize;
+            }
+
             createDataPack(posPtr, result);
             posPtr += packLen;
         }
@@ -95,7 +109,7 @@ void DataExtracter_RemainHandle::handle(QVariant& data)
 }
 
 DataSampler_DownSampler::DataSampler_DownSampler(int sampleRate)
-    : fetchInterval(-1), remainData()
+    : fetchInterval(-1), validDataList()
 {
     init(sampleRate);
 }
@@ -103,34 +117,33 @@ DataSampler_DownSampler::DataSampler_DownSampler(int sampleRate)
 void DataSampler_DownSampler::init(const QVariant &param)
 {   
     fetchInterval = 100 / param.toInt();
-    remainData.swap(QVariant());
+    validDataList.swap(QVariantList());
 
     if (fetchInterval < 0 || fetchInterval > 100) throw std::exception("invalid sample");
 }
 
 void DataSampler_DownSampler::handle(QVariant& data)
 {
-    QVariantList *newDataPtr = NULL, *remainDataPtr = NULL, result;
-    data.convert(QVariant::List, newDataPtr);
-    remainData.convert(QVariant::List, remainDataPtr);
-    if (newDataPtr->size() < fetchInterval){
-        remainData.swap(data);
+    if (data.isNull() || fetchInterval == 2) return;
+
+    validDataList.push_back(data.toList());
+    if (validDataList.size() < fetchInterval)
+    {
+        data.swap(QVariant());
         return ;
     }
 
-    int posSelect = 0, remainSize = remainDataPtr->size();
-    while (posSelect < remainSize){
-        result.append(remainDataPtr->at(posSelect));
+    QVariantList result;
+    int posSelect = fetchInterval, validDataLen = validDataList.size();
+    while (posSelect < validDataLen){
+        result.append(validDataList.first());
+        validDataList.erase(validDataList.begin(), validDataList.begin() + fetchInterval);
         posSelect += fetchInterval;
     }
+    result.append(validDataList.first());
+    validDataList.erase(validDataList.begin());
 
-    while (posSelect - remainSize <= newDataPtr->size()) {
-        result.append(newDataPtr->at(posSelect - remainSize));
-        posSelect += fetchInterval;
-    }
-
-    remainData.swap(QVariant());
-    data.swap(QVariant(result));
+    data.swap(QVariant(result[0]));
 }
 
 //内联函数通常定义在头文件中，因其为编译器期行为。并且通过函数指针调用时会生成函数体
@@ -162,7 +175,7 @@ float dataMap_channel32(int x, float gain){
 }
 
 DataFilter_IIR::DataFilter_IIR(int iBufferLen, int iChannelNum, const QVector<float> &ia, const QVector<float> &ib)
-    :bufferLen(iBufferLen), channelNum(iChannelNum), a(ia), b(ib), channelHistoryList(), dataMapFuncPtr(NULL)
+    :bufferLen(iBufferLen), channelNum(iChannelNum), a(ia), b(ib), channelHistoryList(), dataMapFuncPtr(NULL), bufferWritePos(0)
 {
     if (iBufferLen <= 0 || iChannelNum <= 0 || ia.size() < iBufferLen || ib.size() < iBufferLen) throw std::exception("invalid params");
 
@@ -198,35 +211,38 @@ DataFilter_IIR::DataMapFuncPtr DataFilter_IIR::getMatchDataMapFuncPtr(int channe
 
 void DataFilter_IIR::handle(QVariant& data)
 {
-    QVariantList *dataPtr = NULL;
-    data.convert(QVariant::List, dataPtr);
+    if (data.isNull()) return ;
 
-    for (int packCounter = 0, packSize = dataPtr->size(); packCounter < packSize; ++packCounter)
+    QVariantMap result;
+    QVariantList midData = data.toList();
+    for (int packCounter = 0, packSize = midData.size(); packCounter < packSize; ++packCounter)
     {
-        QVariantList* packPtr = NULL;
-        dataPtr->at(packCounter).convert(QVariant::List, packPtr);
+        QVariantList packData = midData.at(packCounter).toList();
 
         //通道0表示控制信号，不做滤波
-        for (int channelCounter = 1, validChannelNum = packPtr->size(); channelCounter < validChannelNum; ++channelCounter)
+        for (int channelCounter = 1, validChannelNum = packData.size(); channelCounter < validChannelNum; ++channelCounter)
         {
-            float value = (*dataMapFuncPtr)(packPtr->at(channelCounter).toInt(), 1.0);
+            float value = (*dataMapFuncPtr)(packData.at(channelCounter).toInt(), 1.0);
 
-            for (int begin = 1, end = a.size(); begin != end; ++begin){
-                value -= a[begin] * channelHistoryList[channelCounter]->at((bufferWritePos + begin) %  bufferLen);
+            for (int begin = 1, end = a.size(); begin < end; ++begin){
+                value -= a[begin] * channelHistoryList[channelCounter-1]->at((bufferWritePos + begin) %  bufferLen);
             }
 
-            channelHistoryList[channelCounter]->replace(bufferWritePos, value);
+            channelHistoryList[channelCounter-1]->replace(bufferWritePos, value);
 
             value = 0.0;
-            for (int begin = 0, end = b.size(); begin != end; ++begin){
-                value += b[begin] * channelHistoryList[channelCounter]->at((bufferWritePos + begin) %  bufferLen);
+            for (int begin = 0, end = b.size(); begin < end; ++begin){
+                value += b[begin] * channelHistoryList[channelCounter-1]->at((bufferWritePos + begin) %  bufferLen);
             }
 
-            packPtr->replace(channelCounter, value);
+            packData.replace(channelCounter, value);
         }
 
+        result.insert(QString::number(packCounter), packData);
         bufferWritePos = (bufferWritePos + bufferLen - 1) % bufferLen;
     }
+
+    data.swap(QVariant(result));
 }
 
 CSVWriter::CSVWriter(const QString &iFilename, int iChannelNum)

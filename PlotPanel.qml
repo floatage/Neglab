@@ -32,9 +32,6 @@ Rectangle{
                 plotPanel.plotStatus = 1
                 deviceStartIcon.item.imgSource = "/img/pause.png"
                 DeviceTestManager.startDataTransfer()
-                channelNum = DeviceTestManager.getChannelNum()
-                channelNum = channelNum === -1 ? 32 : channelNum
-                createPlotArea(channelNum)
             }
         }
         else if(plotPanel.plotStatus === 1){
@@ -55,14 +52,17 @@ Rectangle{
         target: DeviceTestManager
         onDeviceReadyRead: {
             if (plotPanel.deviceStatus === 1){
-                var deviceNumStr = readData.match("NAME-#[0-9]+-")
-                if (deviceNumStr !== null)
-                {
-                    deviceNumStr = '' + deviceNumStr
-                    DeviceTestManager.sendDataToPort("AT:GI-#" + deviceNumStr.match("[0-9]+"))
-                    plotPanel.deviceStatus = 3
-                    gatherMainProcess()
-                }
+                  //此处为需要获取编号才能开始获取数据的蓝牙设备的处理代码
+//                var deviceNumStr = readData.match("NAME-#[0-9]+-")
+//                if (deviceNumStr !== null)
+//                {
+//                    deviceNumStr = '' + deviceNumStr
+//                    DeviceTestManager.sendDataToPort("AT:GI-#" + deviceNumStr.match("[0-9]+"))
+//                    plotPanel.deviceStatus = 3
+//                    gatherMainProcess()
+//                }
+                plotPanel.deviceStatus = 3
+                gatherMainProcess()
             }
 //            else if (plotPanel.deviceStatus === 3){  //进入数据交换模式后数据信号交由RawDataHandleManager处理发送
 //                for (var begin = 0, end = Object.keys(readData).length; begin < end; ++begin){
@@ -70,11 +70,14 @@ Rectangle{
 //                }
 //            }
         }
-    }
 
-    Connections{
-        target: RawDataHandleManager
-        onDataHandleFinished: {
+        onDeviceJudgeFinished: {
+            channelNum = DeviceTestManager.getChannelNum()
+            channelNum = channelNum === -1 ? 32 : channelNum
+            createPlotArea(channelNum)
+        }
+
+        onPlotDataReady: {
             for (var begin = 0, end = Object.keys(plotData).length; begin < end; ++begin){
                 channelDataUpdate(plotData[""+begin])
             }

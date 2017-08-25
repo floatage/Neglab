@@ -2,13 +2,24 @@
 #include <QSerialPortInfo>
 #include <QDebug>
 
+#include <QVariant>
+#include <QVariantMap>
+#include <QVariantList>
+
+#include "rawdatahandlemanager.h"
 #include "datahandler.h"
 
 DeviceTest* DeviceTest::instance = nullptr;
 DeviceTest::DeviceTest(QObject *parent)
-    : QObject(parent), serialPort(), deviceStatus(CLOSED), deviceChannelNum(-1), rawDataHandleMgr(NULL),
-      packHeadFlag1(0xaa), packHeadFlag2(0x55)
+    : QObject(parent), serialPort(), deviceStatus(CLOSED), deviceChannelNum(-1), rawDataHandleMgr(NULL)
 {
+    rawDataHandleMgr = RawDataHandleManager::getInstance();
+    rawDataHandleMgr->moveToThread(&dataHandleThread);
+    connect(&dataHandleThread, &QThread::finished, rawDataHandleMgr, &QObject::deleteLater);
+    connect(this, &DeviceTest::deviceByteBufferFilled, rawDataHandleMgr, &RawDataHandleManager::handleDeviceByteBufferFilled);
+    connect(rawDataHandleMgr, &RawDataHandleManager::getNextBuffer, this, &DeviceTest::handleGetNextBuffer);
+    dataHandleThread.start();
+
     connect(&serialPort, SIGNAL(readyRead()), SLOT(handleReadyRead()));
     connect(&serialPort, SIGNAL(error(QSerialPort::SerialPortError)), SLOT(handleError(QSerialPort::SerialPortError)));
 }
@@ -57,19 +68,12 @@ void DeviceTest::handleReadyRead()
     }
     else if (deviceStatus == DATATRANSFER)
     {
-        QVariantMap tt;
-        QVariantList test;
-        test.append(1);
-        test.append(2);
-        tt.insert("0", test);
-        tt.insert("1", test);
-        emit deviceReadyRead(QVariant(tt));
-//        byteBuffer.append(serialPort.readAll());
+        byteBuffer.append(serialPort.readAll());
 
-//        if (byteBuffer.size() > 128){
-//            dataTransferMainProcess(byteBuffer);
-//            byteBuffer.clear();
-//        }
+        if (byteBuffer.size() > 128){
+            dataTransferMainProcess(byteBuffer);
+            byteBuffer.clear();
+        }
     }
 }
 
@@ -145,15 +149,6 @@ QVariant DeviceTest::recvDataFromPort(void)
     return readData.toStdString().c_str();
 }
 
-bool DeviceTest::disconnectPort(void)
-{
-    qDebug() << "start disconnectPort";
-    if (serialPort.isOpen())
-        serialPort.close();
-    deviceStatus = CLOSED;
-    return true;
-}
-
 void DeviceTest::searchDevice(void)
 {
     qDebug() << "start searchDevice";
@@ -188,6 +183,15 @@ bool DeviceTest::connectDevice(const QVariant &deviceNum)
     return false;
 }
 
+bool DeviceTest::disconnectPort(void)
+{
+    qDebug() << "start disconnectPort";
+    if (serialPort.isOpen())
+        serialPort.close();
+    deviceStatus = CLOSED;
+    return true;
+}
+
 int DeviceTest::startDataTransfer()
 {
     qDebug() << "start data transfer";
@@ -217,10 +221,12 @@ int DeviceTest::judgeDeviceChannelNum(const QByteArray& data)
         std::pair<int, int>(51, 16),
         std::pair<int, int>(99, 32)
     };
+    static const uchar packHeadFlag1 = 0xaa, packHeadFlag2 = 0x55;
 
+    uchar* dataPtr = (uchar*)data.data();
     int firstFlagPos = -1;
     for (int begin = 0, end = data.size()-1; begin < end; ++begin){
-        if (data[begin] == packHeadFlag1 && data[begin+1] == packHeadFlag2){
+        if (*(dataPtr+begin) == packHeadFlag1 && *(dataPtr+begin+1) == packHeadFlag2){
             if (firstFlagPos == -1){
                 firstFlagPos = begin;
             }else{
@@ -235,17 +241,41 @@ int DeviceTest::judgeDeviceChannelNum(const QByteArray& data)
 
 void DeviceTest::dataTransferMainProcess(const QByteArray& buffer)
 {
+    static bool isFirst = true;
+
     if (deviceChannelNum == -1){
         deviceChannelNum = judgeDeviceChannelNum(buffer);
-        rawDataHandleMgr = RawDataHandleManager::getInstance();
-        rawDataHandleMgr->addHandler(new DataExtracter_RemainHandle(deviceChannelNum));
-        rawDataHandleMgr->addHandler(new DataSampler_DownSampler(100));
-        rawDataHandleMgr->addHandler(new DataFilter_IIR(10, deviceChannelNum, QVector<float>(), QVector<float>()));
-        rawDataHandleMgr->addIntermediateResultHook(4000, 1, new CSVWriter("", deviceChannelNum));
-        rawDataHandleMgr->addIntermediateResultHook(10000, 1, new CSVWriter("", deviceChannelNum));
+        if (deviceChannelNum != -1){
+            rawDataHandleMgr->addHandler(new DataExtracter_RemainHandle(deviceChannelNum));
+            rawDataHandleMgr->addHandler(new DataSampler_DownSampler(100));
+            rawDataHandleMgr->addHandler(new DataFilter_IIR(10, deviceChannelNum, QVector<float>(10, 0.0f), QVector<float>(10, 0.0f)));
+        //    rawDataHandleMgr->addIntermediateResultHook(4000, 1, new CSVWriter("/raw/test.csv", deviceChannelNum));
+        //    rawDataHandleMgr->addIntermediateResultHook(10000, 1, new CSVWriter("/filter/test.csv", deviceChannelNum));
+
+            emit deviceJudgeFinished();
+        }
+
+        return;
     }
 
-    rawDataHandleMgr->handle(buffer);
+    qDebug() << "fill queue" << endl;
+    byteBufferQueue.push_back(QVariant(byteBuffer));
+
+    if (isFirst){
+        isFirst = false;
+        emit deviceByteBufferFilled(byteBufferQueue.front());
+        byteBufferQueue.pop_front();
+    }
+}
+
+void DeviceTest::handleGetNextBuffer(QVariant plotData)
+{
+    qDebug() << "out queue" << endl;
+    emit plotDataReady(plotData);
+    if (!byteBufferQueue.empty()){
+        emit deviceByteBufferFilled(byteBufferQueue.front());
+        byteBufferQueue.pop_front();
+    }
 }
 
 int DeviceTest::openDataFile(const QVariant& fileName)

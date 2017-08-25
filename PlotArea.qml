@@ -152,17 +152,27 @@ Rectangle {
                     }
 
                     curX = curX >= maxX ? 0 : curX
-                    for (var begin = 0, end = prePoints.length; begin < end; ++begin){
+
+                    if (curPoints[0] !== 0){
+                        context.strokeStyle = "#0F0"
+                        context.moveTo(curX-xOffset, 0)
+                        context.lineTo(curX-xOffset, channelPlotCanvas.height)
+                        context.stroke()
+                    }
+
+                    context.strokeStyle = "#000"
+                    //绘图第一个数据为控制信号，则跳过，且基线数组和控制数组下标均减一
+                    for (var begin = 1, end = prePoints.length; begin < end; ++begin){
                         if (begin >= curPoints.length) break
 
-                        if (channelStateList[begin]){
-                            context.moveTo(curX-xOffset, prePoints[begin] + channelBaselineList[begin])
-                            context.lineTo(curX, curPoints[begin] + channelBaselineList[begin])
+                        if (channelStateList[begin-1]){
+                            context.moveTo(curX-xOffset, prePoints[begin] + channelBaselineList[begin-1])
+                            context.lineTo(curX, curPoints[begin] + channelBaselineList[begin-1])
                         }
                     }
+
                     context.stroke()
                     clearCanvas(context, curX)
-
                     curX += xOffset
                     markDirty()
                 }

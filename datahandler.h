@@ -25,7 +25,7 @@ private:
     typedef std::unordered_map<int, std::vector<int>> ChannelControlDict;
 
     int channelNum;
-    const QVector<uchar> headFlag;
+//    const QVector<uchar> headFlag;
     QByteArray remainData;
 
     ChannelControlDict channelControlDict;
@@ -34,7 +34,7 @@ private:
     int packLen;
     int channelDataLen;
 
-    inline bool isArriveHeadFlag(uchar* pos);
+//    inline bool isArriveHeadFlag(uchar* pos);
     inline void createDataPack(uchar* pos, QVariantList& container);
     inline int byteToInt(uchar* head, int len);
 };
@@ -49,7 +49,7 @@ public:
 
 private:
     int fetchInterval;
-    QVariant remainData;
+    QVariantList validDataList;
 };
 
 class DataFilter_IIR: public DataFilter
