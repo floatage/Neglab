@@ -7,6 +7,7 @@
 #include <QObject>
 #include <QQueue>
 #include <QThread>
+#include <QMutex>
 
 class DataHandler
 {
@@ -74,11 +75,12 @@ public:
     ~DataCutter(){}
 };
 
-class ExecuteObject: public QThread
+class ExecuteObject: public QObject
 {
 public:
     virtual void init(const QVariant&) = 0;
     virtual void clear() = 0;
+    virtual void bind(QThread* thread) = 0;
     virtual void execute(const QVariant& params) = 0;
     virtual int identifier() = 0;
     virtual ~ExecuteObject(){}
@@ -111,6 +113,7 @@ private:
 
     static RawDataHandleManager* instance;
 
+    QMutex lock;
     QQueue<QVariant> queue;
     HandlerList dataHandlerChain;
     ExecutorMap intermediateResultHook;

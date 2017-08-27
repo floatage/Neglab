@@ -219,8 +219,6 @@ int DeviceTest::finishDataTransfer()
     if (serialPort.isOpen())
         serialPort.close();
     deviceChannelNum = -1;
-    initDataHandleThread();
-    rawDataHandleMgr->clear();
     return 1;
 }
 
@@ -258,7 +256,7 @@ void DeviceTest::dataTransferMainProcess(const QByteArray& buffer)
         return;
     }
 
-    qDebug() << "fill queue" << endl;
+    qDebug() << QThread::currentThreadId() << "fill queue" << endl;
     byteBufferQueue.push_back(QVariant(byteBuffer));
 
     if (!loopIsRun){
@@ -268,39 +266,52 @@ void DeviceTest::dataTransferMainProcess(const QByteArray& buffer)
     }
 }
 
-void DeviceTest::buildHandleComponent()
-{
-    static bool isBuild = false;
-    static DataHandler *de = new DataExtracter_RemainHandle(), *ds = new DataSampler_DownSampler(), *df = new DataFilter_IIR();
-
-    if (!isBuild){
-        isBuild = true;
-        rawDataHandleMgr->addHandler(de);
-        rawDataHandleMgr->addHandler(ds);
-        rawDataHandleMgr->addHandler(df);
-    //    rawDataHandleMgr->addIntermediateResultHook(4000, 1, new CSVWriter("/raw/test.csv", deviceChannelNum));
-    //    rawDataHandleMgr->addIntermediateResultHook(10000, 1, new CSVWriter("/filter/test.csv", deviceChannelNum));
-    }
-
-    de->init(deviceChannelNum);
-    ds->init(100);
-
-    QVariantList dfParams;
-    dfParams.append(CommonVariable::historyDataBufferLen);
-    dfParams.append(deviceChannelNum);
-    dfParams.append(QVariant(QVariantList::fromVector(QVector<QVariant>(CommonVariable::historyDataBufferLen, 0.0f))));
-    dfParams.append(QVariant(QVariantList::fromVector(QVector<QVariant>(CommonVariable::historyDataBufferLen, 0.0f))));
-    df->init(dfParams);
-}
-
 void DeviceTest::handleGetNextBuffer(QVariant plotData)
 {
-    qDebug() << "out queue" << endl;
+    qDebug() << QThread::currentThreadId() << "out queue" << endl;
     emit plotDataReady(plotData);
     if (!byteBufferQueue.empty()){
         emit deviceByteBufferFilled(byteBufferQueue.front());
         byteBufferQueue.pop_front();
     }
+}
+
+void DeviceTest::buildHandleComponent()
+{
+    rawDataHandleMgr = RawDataHandleManager::getInstance();
+    rawDataHandleMgr->clear();
+    rawDataHandleMgr->addHandler(new DataExtracter_RemainHandle(deviceChannelNum));
+    rawDataHandleMgr->addHandler(new DataSampler_DownSampler(100));
+    rawDataHandleMgr->addHandler(new DataFilter_IIR(10, deviceChannelNum, QVector<float>(10,0.0f), QVector<float>(10,0.0f)));
+
+//初始化处理组件的保险方法
+//    static bool isBuild = false;
+//    static DataHandler *de = new DataExtracter_RemainHandle(), *ds = new DataSampler_DownSampler(), *df = new DataFilter_IIR();
+//    static ExecuteObject* dsWriter = new CSVWriter();
+
+//    if (!isBuild){
+//        isBuild = true;
+//        rawDataHandleMgr->addHandler(de);
+//        rawDataHandleMgr->addHandler(ds);
+//        rawDataHandleMgr->addHandler(df);
+//        rawDataHandleMgr->addIntermediateResultHook(4000, 1, dsWriter);
+//    //    rawDataHandleMgr->addIntermediateResultHook(10000, 1, new CSVWriter("/filter/test.csv", deviceChannelNum));
+//    }
+
+//    de->init(deviceChannelNum);
+//    ds->init(100);
+
+//    QVariantList dfParams;
+//    dfParams.append(CommonVariable::historyDataBufferLen);
+//    dfParams.append(deviceChannelNum);
+//    dfParams.append(QVariant(QVariantList::fromVector(QVector<QVariant>(CommonVariable::historyDataBufferLen, 0.0f))));
+//    dfParams.append(QVariant(QVariantList::fromVector(QVector<QVariant>(CommonVariable::historyDataBufferLen, 0.0f))));
+//    df->init(dfParams);
+
+//    QVariantList dsWriterParams;
+//    dsWriterParams.append("/raw/test.csv");
+//    dsWriterParams.append(deviceChannelNum);
+//    dsWriter->init(dsWriterParams);
 }
 
 int DeviceTest::openDataFile(const QVariant& fileName)

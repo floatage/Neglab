@@ -3,23 +3,26 @@
 
 #include <QFile>
 #include <QString>
-#include <QMutex>
-#include <QWaitCondition>
 #include <QQueue>
 #include <QVariant>
+#include <QMutex>
+#include <QTextStream>
 
 #include "rawdatahandlemanager.h"
 
+class QThread;
 class CSVWriter: public ExecuteObject
 {
+    Q_OBJECT
 public:
+    CSVWriter();
     CSVWriter(const QString& iFilename, int iChannelNum);
     ~CSVWriter();
 
     void init(const QVariant & param);
     void clear();
 
-    void stop();
+    void bind(QThread* thread);
     void execute(const QVariant& params);
     int identifier(){return 1;}
 
@@ -27,12 +30,17 @@ private:
     int channelNum;
     QQueue<QVariant> dataQueue;
     QString fileName;
-    QMutex lock;
-    QWaitCondition signal;
-    bool canRun;
     QFile file;
+    QTextStream out;
+    QThread* writeThread;
+    QMutex lock;
+    bool isLoop;
 
-    void run();
+signals:
+    void hasDataCanWrite();
+
+public slots:
+    void writeData();
 };
 
 #endif // INTERMEDIATERESULTHOOK_H

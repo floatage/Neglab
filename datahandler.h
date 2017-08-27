@@ -7,6 +7,7 @@
 #include <QVector>
 #include <QByteArray>
 #include <QVariant>
+#include <QMutex>
 
 class DataExtracter_RemainHandle: public DataExtracter
 {
@@ -19,15 +20,15 @@ public:
     int identifier(){return 1;}
 
 private:
-    int channelNum;
-//    const QVector<uchar> headFlag;
+    QMutex lock;
     QByteArray remainData;
-
+    int channelNum;
     int controlDataLen;
     int dataLen;
     int packLen;
     int channelDataLen;
 
+//    const QVector<uchar> headFlag;
 //    inline bool isArriveHeadFlag(uchar* pos);
     inline void createDataPack(uchar* pos, QVariantList& container);
     inline int byteToInt(uchar* head, int len);
@@ -43,6 +44,7 @@ public:
     int identifier(){return 1;}
 
 private:
+    QMutex lock;
     int fetchInterval;
     QVariantList validDataList;
 };
@@ -59,6 +61,7 @@ public:
     int identifier(){return 1;}
 
 private:
+    QMutex lock;
     QVector<float> a;
     QVector<float> b;
     QVector<QVector<float>*> channelHistoryList;

@@ -1,6 +1,8 @@
 #include "intermediateresulthook.h"
 
-#include <QTextStream>
+CSVWriter::CSVWriter()
+{
+}
 
 CSVWriter::CSVWriter(const QString &iFilename, int iChannelNum)
 {
@@ -19,72 +21,79 @@ void CSVWriter::init(const QVariant &param)
 {
     QVariantList params = param.toList();
 
+    lock.lock();
+
     clear();
     fileName = params[0].toString();
     file.setFileName(fileName);
     file.open(QIODevice::WriteOnly | QIODevice::Text);
+    out.setDevice(&file);
+
     dataQueue.clear();
     channelNum = params[1].toInt();
-    canRun = true;
-}
+    isLoop = false;
 
-void CSVWriter::clear()
-{
-    stop();
-    if (file.isOpen()) file.close();
-}
-
-void CSVWriter::execute(const QVariant& params)
-{
-    lock.lock();
-    buffer.setValue(params);
-    signal.wakeOne();
     lock.unlock();
-}
-
-void CSVWriter::run(){
-    QTextStream out(&file);
 
     out << "C,";
     for (int begin = 0; begin < channelNum; ++begin){
         out << "T" << begin << ',';
     }
     out << endl;
+    out.flush();
+}
 
-    while(true)
-    {
+void CSVWriter::clear()
+{
+    if (file.isOpen()) file.close();
+}
+
+void CSVWriter::bind(QThread *thread)
+{
+    if (!thread) throw std::exception("write thread is invalid");
+
+    writeThread = thread;
+    this->moveToThread(writeThread);
+    connect(writeThread, &QThread::finished, this, &QObject::deleteLater);
+    connect(this, &CSVWriter::hasDataCanWrite, this, &CSVWriter::writeData);
+    writeThread->start();
+}
+
+void CSVWriter::execute(const QVariant& params)
+{
+    dataQueue.push_back(params);
+
+    if (!isLoop){
         lock.lock();
-        signal.wait(&lock);
-
-        if (!canRun){
-            lock.unlock();
-            break;
-        }
-
-        QVariantList* dataList = NULL;
-        buffer.convert(QVariant::List, dataList);
-        for (int begin = 0; begin < dataList->size(); ++begin)
-        {
-            QVariantList* dataPack = NULL;
-            dataList->at(begin).convert(QVariant::List, dataPack);
-            for (int channelCounter = 0, validChannleNum = dataPack->size(); channelCounter < validChannleNum; ++channelCounter)
-            {
-               out << dataPack->at(channelCounter).toInt() << ',';
-            }
-        }
-        out << '\n';
-        out.flush();
-
+        isLoop = true;
         lock.unlock();
+        emit hasDataCanWrite();
     }
 }
 
-void CSVWriter::stop()
+void CSVWriter::writeData()
 {
-    lock.lock();
-    canRun = false;
-    signal.wakeOne();
-    lock.unlock();
+    QVariantList dataList = dataQueue.first().toList();
+    for (int begin = 0; begin < dataList.size(); ++begin)
+    {
+        QVariantList dataPack = dataList.at(begin).toList();
+        for (int channelCounter = 0, validChannleNum = dataPack.size(); channelCounter < validChannleNum; ++channelCounter)
+        {
+           out << dataPack.at(channelCounter).toInt() << ',';
+        }
+    }
+    out << '\n';
+    out.flush();
+
+    dataQueue.pop_front();
+    if (!dataQueue.isEmpty())
+    {
+        emit hasDataCanWrite();
+    }
+    else
+    {
+        lock.lock();
+        isLoop = false;
+        lock.unlock();
+    }
 }
-
-

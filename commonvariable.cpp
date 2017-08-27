@@ -18,6 +18,7 @@ std::map<int, int> CommonVariable::channelNumMap{
 uchar CommonVariable::packHeadFlag1 = 0xaa;
 uchar CommonVariable::packHeadFlag2 = 0x55;
 
+//包总字节数  包数据部分字节数  包控制信息字节数  包单个数据的字节数
 ChannelControlDict CommonVariable::channelControlDict{
     std::pair<int, std::vector<int>>(2, std::vector<int>{18, 16, 0, 2}),
     std::pair<int, std::vector<int>>(8, std::vector<int>{27, 25, 1, 3}),

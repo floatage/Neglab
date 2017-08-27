@@ -18,14 +18,22 @@ DataExtracter_RemainHandle::~DataExtracter_RemainHandle()
 
 void DataExtracter_RemainHandle::init(const QVariant& param)
 {
+    lock.lock();
+
     channelNum = param.toInt();
-    if (channelNum <= 0 || CommonVariable::channelControlDict.count(channelNum)==0) throw std::exception("invalid channel number");
+    if (channelNum <= 0 || CommonVariable::channelControlDict.count(channelNum)==0)
+    {
+        lock.unlock();
+        throw std::exception("invalid channel number");
+    }
 
     remainData.swap(QByteArray());
     channelDataLen = CommonVariable::channelControlDict[channelNum][3];
     controlDataLen = CommonVariable::channelControlDict[channelNum][2];
     dataLen = CommonVariable::channelControlDict[channelNum][1];
     packLen = CommonVariable::channelControlDict[channelNum][0];
+
+    lock.unlock();
 }
 
 //bool DataExtracter_RemainHandle::isArriveHeadFlag(uchar* pos)
@@ -73,9 +81,12 @@ void DataExtracter_RemainHandle::handle(QVariant& data)
 {
     if (data.isNull()) return;
 
+    lock.lock();
+
     bool isFirst = true;
     QVariantList result;
-    QByteArray rawData = remainData.append(data.toByteArray());
+    QByteArray rawData(remainData);
+    rawData.append(data.toByteArray());
 
     int remainDataSize = 0;
     uchar* posPtr = (uchar*)rawData.data();
@@ -85,8 +96,8 @@ void DataExtracter_RemainHandle::handle(QVariant& data)
         {
             if (isFirst){
                 int remainDataSize = (rawData.size()-begin) % packLen;
-                remainData.swap(QByteArray());
-                std::memcpy(remainData.data(), rawData.data() + rawData.size() - remainDataSize, remainDataSize);
+                remainData.clear();
+                remainData.setRawData(rawData.data() + rawData.size() - remainDataSize, remainDataSize);
                 isFirst = false;
                 end = rawData.size() - packLen - remainDataSize;
             }
@@ -101,6 +112,8 @@ void DataExtracter_RemainHandle::handle(QVariant& data)
     }
 
     data.swap(QVariant(result));
+
+    lock.unlock();
 }
 
 DataSampler_DownSampler::DataSampler_DownSampler()
@@ -115,8 +128,12 @@ DataSampler_DownSampler::DataSampler_DownSampler(int sampleRate)
 
 void DataSampler_DownSampler::init(const QVariant &param)
 {   
+    lock.lock();
+
     fetchInterval = 100 / param.toInt();
     validDataList.swap(QVariantList());
+
+    lock.unlock();
 
     if (fetchInterval < 0 || fetchInterval > 100) throw std::exception("invalid sample");
 }
@@ -124,6 +141,8 @@ void DataSampler_DownSampler::init(const QVariant &param)
 void DataSampler_DownSampler::handle(QVariant& data)
 {
     if (data.isNull() || fetchInterval == 1) return;
+
+    lock.lock();
 
     validDataList.push_back(data.toList());
     if (validDataList.size() < fetchInterval)
@@ -143,6 +162,8 @@ void DataSampler_DownSampler::handle(QVariant& data)
     validDataList.erase(validDataList.begin());
 
     data.swap(QVariant(result[0]));
+
+    lock.unlock();
 }
 
 DataFilter_IIR::DataFilter_IIR()
@@ -168,18 +189,26 @@ DataFilter_IIR::~DataFilter_IIR()
 
 void DataFilter_IIR::clear()
 {
-    a.clear();
-    b.clear();
+    lock.lock();
+
+    a.swap(QVector<float>());
+    b.swap(QVector<float>());
     bufferWritePos = 0;
     for (int begin = 0; begin < channelNum; ++begin){
         delete channelHistoryList[begin];
+        channelHistoryList[begin] = NULL;
     }
+    channelHistoryList.clear();
+
+    lock.unlock();
 }
 
 //此处只做运行时的重新初始化，不做构造函数的初始化, 因为出现了多线程堆越界问题，只有此方法可解决
 void DataFilter_IIR::init(const QVariant &param)
 {
     clear();
+
+    lock.lock();
 
     QVariantList params = param.toList();
     bufferLen = params[0].toInt();
@@ -193,18 +222,26 @@ void DataFilter_IIR::init(const QVariant &param)
     for (QVariantList::iterator it = abValue.begin(); it != abValue.end(); ++it)
         b.append(it->toFloat());
 
-    if (bufferLen <= 0 || channelNum <= 0 || a.size() < bufferLen || b.size() < bufferLen) throw std::exception("invalid params");
+    if (bufferLen <= 0 || channelNum <= 0 || a.size() < bufferLen || b.size() < bufferLen)
+    {
+        lock.unlock();
+        throw std::exception("invalid params");
+    }
 
     for (int begin = 0; begin < channelNum; ++begin){
         QVector<float>* u = new QVector<float>(bufferLen, 0.0f);
         channelHistoryList.append(u);
     }
     dataMapFuncPtr = CommonVariable::getMatchDataMapFuncPtr(channelNum);
+
+    lock.unlock();
 }
 
 void DataFilter_IIR::handle(QVariant& data)
 {
     if (data.isNull()) return ;
+
+    lock.lock();
 
     QVariantList midData = data.toList();
     for (int packCounter = 0, packSize = midData.size(); packCounter < packSize; ++packCounter)
@@ -235,4 +272,6 @@ void DataFilter_IIR::handle(QVariant& data)
     }
 
     data.swap(QVariant(midData));
+
+    lock.unlock();
 }
