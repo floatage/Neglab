@@ -5,13 +5,12 @@
 #include <QSerialPort>
 #include <QVariant>
 #include <QString>
-#include <QVector>
 #include <QQueue>
-#include <QThread>
 
-#include "rawdatahandlemanager.h"
+#include "commonvariable.h"
 
 class QSerialPort;
+class RawDataHandleManager;
 class DeviceTest : public QObject
 {
     Q_OBJECT
@@ -66,8 +65,10 @@ private:
     DeviceStatus deviceStatus;
     int deviceChannelNum;
     RawDataHandleManager* rawDataHandleMgr;
-    QThread dataHandleThread;
+    QThread* dataHandleThread;
 
+    void initDataHandleThread();
+    void buildHandleComponent();
     int judgeDeviceChannelNum(const QByteArray& data);
     void dataTransferMainProcess(const QByteArray& buffer);
 };

@@ -6,7 +6,9 @@ CONFIG += c++11
 SOURCES += main.cpp \
     devicetest.cpp \
     rawdatahandlemanager.cpp \
-    datahandler.cpp
+    datahandler.cpp \
+    commonvariable.cpp \
+    intermediateresulthook.cpp
 
 RESOURCES += qml.qrc
 
@@ -19,5 +21,7 @@ include(deployment.pri)
 HEADERS += \
     devicetest.h \
     rawdatahandlemanager.h \
-    datahandler.h
+    datahandler.h \
+    commonvariable.h \
+    intermediateresulthook.h
 

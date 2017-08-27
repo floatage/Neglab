@@ -1,17 +1,14 @@
 #include "datahandler.h"
 #include <cstring>
 #include <QVariantList>
-#include <QVariantMap>
-#include <QTextStream>
 #include <QDebug>
 
-DataExtracter_RemainHandle::DataExtracter_RemainHandle(int iChannelNum)
-    :channelControlDict()
+DataExtracter_RemainHandle::DataExtracter_RemainHandle()
 {
-    channelControlDict[2] = {18, 16, 0, 2};
-    channelControlDict[8] = {27, 25, 1, 3};
-    channelControlDict[16] = {51, 49, 1, 3};
-    channelControlDict[32] = {99, 97, 1, 3};
+}
+
+DataExtracter_RemainHandle::DataExtracter_RemainHandle(int iChannelNum)
+{
     init(iChannelNum);
 }
 
@@ -22,13 +19,13 @@ DataExtracter_RemainHandle::~DataExtracter_RemainHandle()
 void DataExtracter_RemainHandle::init(const QVariant& param)
 {
     channelNum = param.toInt();
-    if (channelNum <= 0) throw std::exception("invalid channel number");
+    if (channelNum <= 0 || CommonVariable::channelControlDict.count(channelNum)==0) throw std::exception("invalid channel number");
 
     remainData.swap(QByteArray());
-    channelDataLen = channelControlDict[channelNum][3];
-    controlDataLen = channelControlDict[channelNum][2];
-    dataLen = channelControlDict[channelNum][1];
-    packLen = channelControlDict[channelNum][0];
+    channelDataLen = CommonVariable::channelControlDict[channelNum][3];
+    controlDataLen = CommonVariable::channelControlDict[channelNum][2];
+    dataLen = CommonVariable::channelControlDict[channelNum][1];
+    packLen = CommonVariable::channelControlDict[channelNum][0];
 }
 
 //bool DataExtracter_RemainHandle::isArriveHeadFlag(uchar* pos)
@@ -54,7 +51,7 @@ int DataExtracter_RemainHandle::byteToInt(uchar *head, int len)
 
 void DataExtracter_RemainHandle::createDataPack(uchar *pos, QVariantList& container)
 {
-    QByteArray controlData(controlDataLen, 0x00);
+    QByteArray controlData(controlDataLen, CommonVariable::channelDefaultControlInfor);
     std::memcpy(controlData.data(), pos, controlDataLen);
     pos += controlDataLen;
 
@@ -74,8 +71,6 @@ void DataExtracter_RemainHandle::createDataPack(uchar *pos, QVariantList& contai
 
 void DataExtracter_RemainHandle::handle(QVariant& data)
 {
-    static const uchar packHeadFlag1 = 0xaa, packHeadFlag2 = 0x55;
-
     if (data.isNull()) return;
 
     bool isFirst = true;
@@ -86,7 +81,7 @@ void DataExtracter_RemainHandle::handle(QVariant& data)
     uchar* posPtr = (uchar*)rawData.data();
     for (int begin = 0, end = rawData.size() - packLen - remainDataSize; begin < end; ++begin)
     {
-        if (*(posPtr+packLen) == packHeadFlag1 && *(posPtr+packLen+1) == packHeadFlag2)
+        if (*(posPtr+packLen) == CommonVariable::packHeadFlag1 && *(posPtr+packLen+1) == CommonVariable::packHeadFlag2)
         {
             if (isFirst){
                 int remainDataSize = (rawData.size()-begin) % packLen;
@@ -108,6 +103,10 @@ void DataExtracter_RemainHandle::handle(QVariant& data)
     data.swap(QVariant(result));
 }
 
+DataSampler_DownSampler::DataSampler_DownSampler()
+{
+}
+
 DataSampler_DownSampler::DataSampler_DownSampler(int sampleRate)
     : fetchInterval(-1), validDataList()
 {
@@ -124,7 +123,7 @@ void DataSampler_DownSampler::init(const QVariant &param)
 
 void DataSampler_DownSampler::handle(QVariant& data)
 {
-    if (data.isNull() || fetchInterval == 2) return;
+    if (data.isNull() || fetchInterval == 1) return;
 
     validDataList.push_back(data.toList());
     if (validDataList.size() < fetchInterval)
@@ -146,32 +145,8 @@ void DataSampler_DownSampler::handle(QVariant& data)
     data.swap(QVariant(result[0]));
 }
 
-//内联函数通常定义在头文件中，因其为编译器期行为。并且通过函数指针调用时会生成函数体
-//因若无函数体则无法使用函数指针调用函数，并且调试器可能无法调试内联函数，内联函数升级时必须编译
-//则下面函数定义实际得不到想要的效果
-//inline float dataMap_channel2(int x, float){
-//   // (x - 2^16) / 2^16
-//   return  (x - 65536.0f) / 65536.0f;
-//}
-
-float dataMap_channel2(int x, float){
-   // (x - 2^16) / 2^16
-   return  (x - 65536.0f) / 65536.0f;
-}
-
-float dataMap_channel8(int x, float gain){
-    // (x - 2^16) / 2^16 * 2.0*10^6
-    return (x - 65536.0f) / 65536.0f * 2000000.0f / gain;
-}
-
-float dataMap_channel16(int x, float gain){
-    // (x - 2^24) / 2^24 * 2.0*10^6
-    return (x - 16777216.0f) / 16777216.0f * 2000000.0f / gain;
-}
-
-float dataMap_channel32(int x, float gain){
-    // (x - 2^24) / 2^24 * 2.0*10^6
-    return (x - 16777216.0f) / 16777216.0f * 2000000.0f / gain;
+DataFilter_IIR::DataFilter_IIR()
+{
 }
 
 DataFilter_IIR::DataFilter_IIR(int iBufferLen, int iChannelNum, const QVector<float> &ia, const QVector<float> &ib)
@@ -183,37 +158,54 @@ DataFilter_IIR::DataFilter_IIR(int iBufferLen, int iChannelNum, const QVector<fl
         QVector<float>* u = new QVector<float>(bufferLen, 0.0f);
         channelHistoryList.append(u);
     }
-    dataMapFuncPtr = getMatchDataMapFuncPtr(channelNum);
+    dataMapFuncPtr = CommonVariable::getMatchDataMapFuncPtr(channelNum);
 }
 
 DataFilter_IIR::~DataFilter_IIR()
 {
+    clear();
+}
+
+void DataFilter_IIR::clear()
+{
+    a.clear();
+    b.clear();
+    bufferWritePos = 0;
     for (int begin = 0; begin < channelNum; ++begin){
         delete channelHistoryList[begin];
     }
 }
 
-DataFilter_IIR::DataMapFuncPtr DataFilter_IIR::getMatchDataMapFuncPtr(int channelNum)
+//此处只做运行时的重新初始化，不做构造函数的初始化, 因为出现了多线程堆越界问题，只有此方法可解决
+void DataFilter_IIR::init(const QVariant &param)
 {
-    switch (channelNum) {
-        case 2:
-            return &dataMap_channel2;
-        case 8:
-            return &dataMap_channel8;
-        case 16:
-            return &dataMap_channel16;
-        case 32:
-            return &dataMap_channel32;
-        default:
-            return NULL;
+    clear();
+
+    QVariantList params = param.toList();
+    bufferLen = params[0].toInt();
+    channelNum = params[1].toInt();
+
+    QVariantList abValue = params[2].toList();
+    for (QVariantList::iterator it = abValue.begin(); it != abValue.end(); ++it)
+        a.append(it->toFloat());
+
+    abValue = params[3].toList();
+    for (QVariantList::iterator it = abValue.begin(); it != abValue.end(); ++it)
+        b.append(it->toFloat());
+
+    if (bufferLen <= 0 || channelNum <= 0 || a.size() < bufferLen || b.size() < bufferLen) throw std::exception("invalid params");
+
+    for (int begin = 0; begin < channelNum; ++begin){
+        QVector<float>* u = new QVector<float>(bufferLen, 0.0f);
+        channelHistoryList.append(u);
     }
+    dataMapFuncPtr = CommonVariable::getMatchDataMapFuncPtr(channelNum);
 }
 
 void DataFilter_IIR::handle(QVariant& data)
 {
     if (data.isNull()) return ;
 
-    QVariantMap result;
     QVariantList midData = data.toList();
     for (int packCounter = 0, packSize = midData.size(); packCounter < packSize; ++packCounter)
     {
@@ -238,94 +230,9 @@ void DataFilter_IIR::handle(QVariant& data)
             packData.replace(channelCounter, value);
         }
 
-        result.insert(QString::number(packCounter), packData);
+        midData.replace(packCounter, packData);
         bufferWritePos = (bufferWritePos + bufferLen - 1) % bufferLen;
     }
 
-    data.swap(QVariant(result));
-}
-
-CSVWriter::CSVWriter(const QString &iFilename, int iChannelNum)
-{
-    QVariantList params;
-    params.append(iFilename);
-    params.append(iChannelNum);
-    init(params);
-}
-
-CSVWriter::~CSVWriter()
-{
-    clear();
-}
-
-void CSVWriter::init(const QVariant &param)
-{
-    QVariantList params = param.toList();
-
-    clear();
-    fileName = params[0].toString();
-    file.setFileName(fileName);
-    file.open(QIODevice::WriteOnly | QIODevice::Text);
-    buffer.swap(QVariant());
-    channelNum = params[1].toInt();
-    canRun = true;
-}
-
-void CSVWriter::clear()
-{
-    stop();
-    if (file.isOpen()) file.close();
-}
-
-void CSVWriter::execute(const QVariant& params)
-{
-    lock.lock();
-    buffer.setValue(params);
-    signal.wakeOne();
-    lock.unlock();
-}
-
-void CSVWriter::run(){
-    QTextStream out(&file);
-
-    out << "C,";
-    for (int begin = 0; begin < channelNum; ++begin){
-        out << "T" << begin << ',';
-    }
-    out << endl;
-
-    while(true)
-    {
-        lock.lock();
-        signal.wait(&lock);
-
-        if (!canRun){
-            lock.unlock();
-            break;
-        }
-
-        QVariantList* dataList = NULL;
-        buffer.convert(QVariant::List, dataList);
-        for (int begin = 0; begin < dataList->size(); ++begin)
-        {
-            QVariantList* dataPack = NULL;
-            dataList->at(begin).convert(QVariant::List, dataPack);
-            for (int channelCounter = 0, validChannleNum = dataPack->size(); channelCounter < validChannleNum; ++channelCounter)
-            {
-               out << dataPack->at(channelCounter).toInt() << ',';
-            }
-        }
-        out << '\n';
-        out.flush();
-
-        lock.unlock();
-    }
-}
-
-void CSVWriter::stop()
-{
-    lock.lock();
-    canRun = false;
-    signal.wakeOne();
-    lock.unlock();
+    data.swap(QVariant(midData));
 }

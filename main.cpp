@@ -3,7 +3,10 @@
 #include <QtQml>
 #include <QDebug>
 
+#include "commonvariable.h"
+#include "commonvariable.cpp"
 #include "devicetest.h"
+#include "rawdatahandlemanager.h"
 
 int main(int argc, char *argv[])
 {

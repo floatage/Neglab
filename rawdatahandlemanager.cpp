@@ -12,6 +12,9 @@ RawDataHandleManager::RawDataHandleManager()
 RawDataHandleManager::~RawDataHandleManager()
 {
     clear();
+    if (RawDataHandleManager::instance != NULL){
+        delete RawDataHandleManager::instance;
+    }
 }
 
 void RawDataHandleManager::init()
@@ -23,11 +26,13 @@ void RawDataHandleManager::clear()
 {
     for(HandlerList::iterator begin = dataHandlerChain.begin(), end = dataHandlerChain.end(); begin != end; ++begin){
         delete (*begin);
+        *begin = NULL;
     }
     dataHandlerChain.swap(HandlerList());
 
     for(ExecutorMap::iterator begin = intermediateResultHook.begin(), end = intermediateResultHook.end(); begin != end; ++begin){
         delete (*begin);
+        *begin = NULL;
     }
     intermediateResultHook.swap(ExecutorMap());
 }
@@ -106,8 +111,8 @@ bool RawDataHandleManager::deleteIntermediateResultHook(int priority, int identi
 
     while (range.first != range.second){
         if ((*range.first)->identifier() == hookIdentifier){
-            intermediateResultHook.erase(range.first);
             delete (*range.first);
+            intermediateResultHook.erase(range.first);
             return true;
         }
 

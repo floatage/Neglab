@@ -18,6 +18,7 @@ Rectangle{
     property int deviceStatus: 0
     property var gatherInfor: null
     property int channelNum: 16
+    property var plotBuffer: []
 
     signal channelDataUpdate(var newData)
 
@@ -64,10 +65,7 @@ Rectangle{
                 plotPanel.deviceStatus = 3
                 gatherMainProcess()
             }
-//            else if (plotPanel.deviceStatus === 3){  //进入数据交换模式后数据信号交由RawDataHandleManager处理发送
-//                for (var begin = 0, end = Object.keys(readData).length; begin < end; ++begin){
-//                    channelDataUpdate(readData[""+begin])
-//                }
+//            else if (plotPanel.deviceStatus === 3){
 //            }
         }
 
@@ -78,9 +76,26 @@ Rectangle{
         }
 
         onPlotDataReady: {
-            for (var begin = 0, end = Object.keys(plotData).length; begin < end; ++begin){
-                channelDataUpdate(plotData[""+begin])
+//            for (var begin = 0, end = Object.keys(plotData).length; begin < end; ++begin){
+//                channelDataUpdate(plotData[""+begin])
+//            }
+//            for (var begin = 0, end = plotData.length; begin < end; ++begin){
+//                channelDataUpdate(plotData[begin])
+//            }
+
+            if (plotBuffer.length <= 0)
+            {
+                plotBuffer = plotData
             }
+            else
+            {
+                //为防止定时器可能产生的线程安全问题，采用push而不用concat
+                for (var begin = 0, end = plotData.length; begin < end; ++begin){
+                    plotBuffer.push(plotData[begin])
+                }
+            }
+
+            if (!plotTimer.running) plotTimer.restart()
         }
     }
 
@@ -105,6 +120,19 @@ Rectangle{
                                                                             'anchors.top': plotAreaToolBar.bottom,
                                                                             'anchors.topMargin': (plotPanel.height - plotAreaToolBar.height) * 0.02
                                                                         });
+        }
+    }
+
+    Timer{
+        id: plotTimer
+        interval: 10;
+        running: false;
+        repeat: true
+        onTriggered:{
+            if (plotBuffer.length > 0)
+                channelDataUpdate(plotBuffer.shift())
+            else
+                plotTimer.stop()
         }
     }
 
@@ -288,7 +316,8 @@ Rectangle{
                             plotPanel.plotStatus = 0
                             deviceStartIcon.item.imgSource = "/img/start.png"
                             plotPanel.gatherInfor = null
-                            DeviceTestManager.disconnectPort()
+                            DeviceTestManager.finishDataTransfer()
+                            plotBuffer = []
                             plotPanel.deviceStatus = 0
                         }
                     }
