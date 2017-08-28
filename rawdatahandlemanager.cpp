@@ -67,7 +67,6 @@ void RawDataHandleManager::handleDeviceByteBufferFilled(QVariant buffer)
 
     qDebug() << QThread::currentThreadId() << "handle finished;Next" << endl;
     emit getNextBuffer(buffer);
-//    emit dataHandleFinished(buffer);
 
     lock.unlock();
 }

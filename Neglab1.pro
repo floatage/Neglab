@@ -8,7 +8,8 @@ SOURCES += main.cpp \
     rawdatahandlemanager.cpp \
     datahandler.cpp \
     commonvariable.cpp \
-    intermediateresulthook.cpp
+    intermediateresulthook.cpp \
+    datasourcemanager.cpp
 
 RESOURCES += qml.qrc
 
@@ -23,5 +24,6 @@ HEADERS += \
     rawdatahandlemanager.h \
     datahandler.h \
     commonvariable.h \
-    intermediateresulthook.h
+    intermediateresulthook.h \
+    datasourcemanager.h
 

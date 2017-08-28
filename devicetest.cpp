@@ -3,14 +3,19 @@
 #include <QVariantList>
 #include <QThread>
 #include <QDebug>
+#include <QFile>
+#include <QTextStream>
+#include <QVariantMap>
 
 #include "rawdatahandlemanager.h"
 #include "datahandler.h"
 #include "intermediateresulthook.h"
+#include "datasourcemanager.h"
 
 DeviceTest* DeviceTest::instance = nullptr;
 DeviceTest::DeviceTest(QObject *parent)
-    : QObject(parent), serialPort(), deviceStatus(CLOSED), deviceChannelNum(-1), rawDataHandleMgr(NULL), dataHandleThread(NULL)
+    : QObject(parent), serialPort(), deviceStatus(CLOSED), deviceChannelNum(-1), rawDataHandleMgr(NULL), dataHandleThread(NULL),
+      dataSource(NULL)
 {
     initDataHandleThread();
 
@@ -202,6 +207,7 @@ int DeviceTest::startDataTransfer()
 {
     qDebug() << "start data transfer";
     deviceStatus = DATATRANSFER;
+    if (dataSource) dataSource->start();
     return 1;
 }
 
@@ -209,6 +215,7 @@ int DeviceTest::pauseDataTransfer()
 {
     qDebug() << "pause data transfer";
     deviceStatus = PAUSE;
+    if (dataSource) dataSource->pause();
     return 1;
 }
 
@@ -219,6 +226,14 @@ int DeviceTest::finishDataTransfer()
     if (serialPort.isOpen())
         serialPort.close();
     deviceChannelNum = -1;
+    byteBufferQueue.clear();
+
+    if (dataSource){
+        dataSource->stop();
+        delete dataSource;
+        dataSource = NULL;
+    }
+
     return 1;
 }
 
@@ -242,6 +257,8 @@ int DeviceTest::judgeDeviceChannelNum(const QByteArray& data)
 
 void DeviceTest::dataTransferMainProcess(const QByteArray& buffer)
 {
+    //为了防止信号丢失的情况，达到一定次数重新激活循环
+    static int reActiveNumer = 20;
     static bool loopIsRun = false;
 
     if (deviceChannelNum == -1){
@@ -258,6 +275,11 @@ void DeviceTest::dataTransferMainProcess(const QByteArray& buffer)
 
     qDebug() << QThread::currentThreadId() << "fill queue" << endl;
     byteBufferQueue.push_back(QVariant(byteBuffer));
+
+    if (--reActiveNumer){
+        loopIsRun = false;
+        reActiveNumer = 20;
+    }
 
     if (!loopIsRun){
         loopIsRun = true;
@@ -276,13 +298,24 @@ void DeviceTest::handleGetNextBuffer(QVariant plotData)
     }
 }
 
+void DeviceTest::handlePlotDataGenerated(QVariant plotData)
+{
+    qDebug() << QThread::currentThreadId() << "data generated" << endl;
+    emit plotDataReady(plotData);
+    emit plotDataTransferFinished();
+}
+
 void DeviceTest::buildHandleComponent()
 {
     rawDataHandleMgr = RawDataHandleManager::getInstance();
     rawDataHandleMgr->clear();
     rawDataHandleMgr->addHandler(new DataExtracter_RemainHandle(deviceChannelNum));
     rawDataHandleMgr->addHandler(new DataSampler_DownSampler(100));
-    rawDataHandleMgr->addHandler(new DataFilter_IIR(10, deviceChannelNum, QVector<float>(10,0.0f), QVector<float>(10,0.0f)));
+
+    int historyLen = CommonVariable::historyDataBufferLen;
+    rawDataHandleMgr->addHandler(new DataFilter_IIR(historyLen, deviceChannelNum, QVector<float>(historyLen,1.0f), QVector<float>(historyLen,1.0f)));
+    rawDataHandleMgr->addIntermediateResultHook(4000, 1, new CSVWriter("filterBefor.csv", deviceChannelNum));
+    rawDataHandleMgr->addIntermediateResultHook(10000, 1, new CSVWriter("filterAfter.csv", deviceChannelNum));
 
 //初始化处理组件的保险方法
 //    static bool isBuild = false;
@@ -295,7 +328,6 @@ void DeviceTest::buildHandleComponent()
 //        rawDataHandleMgr->addHandler(ds);
 //        rawDataHandleMgr->addHandler(df);
 //        rawDataHandleMgr->addIntermediateResultHook(4000, 1, dsWriter);
-//    //    rawDataHandleMgr->addIntermediateResultHook(10000, 1, new CSVWriter("/filter/test.csv", deviceChannelNum));
 //    }
 
 //    de->init(deviceChannelNum);
@@ -309,19 +341,50 @@ void DeviceTest::buildHandleComponent()
 //    df->init(dfParams);
 
 //    QVariantList dsWriterParams;
-//    dsWriterParams.append("/raw/test.csv");
+//    dsWriterParams.append("test.csv");
 //    dsWriterParams.append(deviceChannelNum);
 //    dsWriter->init(dsWriterParams);
 }
 
 int DeviceTest::openDataFile(const QVariant& fileName)
 {
-    qDebug() << "start open data file";
+    qDebug() << "start open data file" << fileName.toString();
+    QString filenameStr = fileName.toString();
+    filenameStr = filenameStr.right(filenameStr.length() - 8);
+
+    dataSource = DataSourceManager::getDataSource(filenameStr);
+    if (dataSource){
+        dataSource->bind(this, new QThread());
+        deviceChannelNum = dataSource->judgeDeviceChannelNum();
+        emit deviceJudgeFinished();
+        return 1;
+    }
+
     return -1;
 }
 
-int DeviceTest::saveDataToFile(const QVariant& filename)
+int DeviceTest::saveDataToDir(const QVariant& dirName, const QVariant& description)
 {
     qDebug() << "start save data file";
-    return -1;
+
+    QFile gatherInforFile("gatherInfor.txt");
+    gatherInforFile.open(QIODevice::WriteOnly | QIODevice::Text);
+    QTextStream out(&gatherInforFile);
+    out.setCodec("UTF-8");
+    QVariantMap gatherInfor = description.toMap();
+
+    for (QVariantMap::iterator it = gatherInfor.begin(); it != gatherInfor.end(); ++it){
+        out << it.key() << ": " << it.value().toString() << CommonVariable::newlineStr;
+    }
+    gatherInforFile.close();
+
+    QString dir = dirName.toString();
+    dir = dir.right(dir.length() - 8);
+
+    return CommonVariable::copyCurDirFile(CommonVariable::tmpFileDefaultPath, dir, CommonVariable::dataFilePattern);
+}
+
+int DeviceTest::modifyDefaultSetting(const QVariant& newSetting)
+{
+    return 1;
 }

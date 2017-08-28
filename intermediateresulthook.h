@@ -10,6 +10,7 @@
 
 #include "rawdatahandlemanager.h"
 
+//若需其他格式按照此类实现一个类加入到RawDataHandleManager即可
 class QThread;
 class CSVWriter: public ExecuteObject
 {

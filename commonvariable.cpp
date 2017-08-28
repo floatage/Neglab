@@ -1,4 +1,8 @@
 #include "commonvariable.h"
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
+#include <QRegExp>
 
 int CommonVariable::openModeBufferMaxSize = 60;
 
@@ -7,6 +11,12 @@ int CommonVariable::dataTransferModeBufferMaxSize = 60;
 QString CommonVariable::searchDeviceCommandStr("AT:GS");
 
 QString CommonVariable::connectDeviceCommandStr("AT:GI-#");
+
+QString CommonVariable::newlineStr("\n");
+
+QString CommonVariable::tmpFileDefaultPath("./");
+
+QString CommonVariable::dataFilePattern(".*\.(csv|txt)");
 
 std::map<int, int> CommonVariable::channelNumMap{
     std::pair<int, int>(18, 2),
@@ -67,4 +77,47 @@ DataMapFuncPtr CommonVariable::getMatchDataMapFuncPtr(int channelNum)
         default:
             return NULL;
     }
+}
+
+//windows下的正确的路径应该为E:\\...
+bool CommonVariable::copyCurDirFile(const QString &srcFilePath, const QString &tgtFilePath, const QString& pattern)
+{
+    QFileInfo srcFileInfo(srcFilePath);
+    if (srcFileInfo.isDir()) {
+        QDir targetDir(tgtFilePath);
+        QDir sourceDir(srcFilePath);
+        QStringList fileNames = sourceDir.entryList(QDir::Files | QDir::NoDotAndDotDot);
+        QRegExp fileFilter(pattern);
+
+        foreach (QString fileName, fileNames)
+        {
+            if (!fileFilter.exactMatch(fileName))
+                continue;
+
+            QString path = sourceDir.absolutePath() + "\\" + fileName;
+            QString newPath = targetDir.absolutePath() + "\\" + fileName;
+            path.replace("/", "\\");
+            newPath.replace("/", "\\");
+
+            if (targetDir.exists(newPath)){
+                targetDir.remove(newPath);
+            }
+
+            if (!QFile::copy(path, newPath)){
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+void CommonVariable::load(const QString &settingPath)
+{
+}
+
+void CommonVariable::save(const QString &settingPath)
+{
 }

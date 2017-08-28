@@ -19,6 +19,12 @@ public:
 
     static QString connectDeviceCommandStr;
 
+    static QString newlineStr;
+
+    static QString tmpFileDefaultPath;
+
+    static QString dataFilePattern;
+
     static std::map<int, int> channelNumMap;
 
     static uchar packHeadFlag1, packHeadFlag2;
@@ -30,6 +36,13 @@ public:
     static int historyDataBufferLen;
 
     static DataMapFuncPtr getMatchDataMapFuncPtr(int channelNum);
+
+    static bool copyCurDirFile(const QString &srcFilePath, const QString &tgtFilePath, const QString &pattern);
+
+    //设置可改成从配置文件中读取
+    static void load(const QString& settingPath);
+
+    static void save(const QString& settingPath);
 
 private:
     inline static float dataMap_channel2(int x, float);

@@ -161,7 +161,7 @@ Rectangle {
                     }
 
                     context.strokeStyle = "#000"
-                    //绘图第一个数据为控制信号，则跳过，且基线数组和控制数组下标均减一
+                    //绘图第一个数据为控制信号，则跳过，由于控制信号影响导致下标不匹配，则基线数组和控制数组下标均需减一
                     for (var begin = 1, end = prePoints.length; begin < end; ++begin){
                         if (begin >= curPoints.length) break
 

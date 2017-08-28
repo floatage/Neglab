@@ -1,5 +1,6 @@
 import QtQuick 2.0
 import QtQuick.Controls 1.3
+import QtQuick.Dialogs 1.2
 
 //多次点击开始图标会导致内存一直升高的情况
 
@@ -17,8 +18,10 @@ Rectangle{
     //0: closed  1: search  2: pause 3:data
     property int deviceStatus: 0
     property var gatherInfor: null
+    property var storeGatherInfor: null
     property int channelNum: 16
     property var plotBuffer: []
+    property bool fileMode : false
 
     signal channelDataUpdate(var newData)
 
@@ -79,23 +82,23 @@ Rectangle{
 //            for (var begin = 0, end = Object.keys(plotData).length; begin < end; ++begin){
 //                channelDataUpdate(plotData[""+begin])
 //            }
-//            for (var begin = 0, end = plotData.length; begin < end; ++begin){
-//                channelDataUpdate(plotData[begin])
+            for (var begin = 0, end = plotData.length; begin < end; ++begin){
+                channelDataUpdate(plotData[begin])
+            }
+
+//            if (plotBuffer.length <= 0)
+//            {
+//                plotBuffer = plotData
+//            }
+//            else
+//            {
+//                //为防止定时器可能产生的线程安全问题，采用push而不用concat
+//                for (var begin = 0, end = plotData.length; begin < end; ++begin){
+//                    plotBuffer.push(plotData[begin])
+//                }
 //            }
 
-            if (plotBuffer.length <= 0)
-            {
-                plotBuffer = plotData
-            }
-            else
-            {
-                //为防止定时器可能产生的线程安全问题，采用push而不用concat
-                for (var begin = 0, end = plotData.length; begin < end; ++begin){
-                    plotBuffer.push(plotData[begin])
-                }
-            }
-
-            if (!plotTimer.running) plotTimer.restart()
+//            if (!plotTimer.running) plotTimer.restart()
         }
     }
 
@@ -194,6 +197,31 @@ Rectangle{
         width: parent.width
         height: 40
 
+        FileDialog{
+            id: fileOpenFileDialog
+            title: qsTr("请选择数据文件")
+            selectFolder: false
+            selectMultiple: false
+            nameFilters: ['CSV Files (*.csv)']
+            onAccepted: {
+                if (DeviceTestManager.openDataFile(fileUrl) === 1){
+                    fileMode = true
+                    plotPanel.deviceStatus = 3
+                    gatherMainProcess()
+                }
+            }
+        }
+
+        FileDialog{
+            id: fileSaveFileDialog
+            title: qsTr("请选择存储目录")
+            selectFolder: true
+            selectMultiple: false
+            onAccepted: {
+                DeviceTestManager.saveDataToDir(fileUrl, storeGatherInfor)
+            }
+        }
+
         Rectangle{
             id: fileIconGroup
             width:parent.width * 0.195
@@ -203,7 +231,7 @@ Rectangle{
             anchors.verticalCenter: parent.verticalCenter
 
             Row{
-                spacing: (parent.width - creatIcon.width*3)/2
+                spacing: (parent.width - saveIcon.width*3)/2
 
                 Loader {
                     id: creatIcon
@@ -215,6 +243,14 @@ Rectangle{
                     id: saveIcon
                     sourceComponent: iconItem
                     onLoaded: item.imgSource = "/img/save.png"
+
+                    Connections{
+                        target: saveIcon.item
+                        onIconClicked: {
+                            if (storeGatherInfor !== null)
+                                fileSaveFileDialog.open()
+                        }
+                    }
                 }
 
                 Loader {
@@ -222,6 +258,14 @@ Rectangle{
                     sourceComponent: iconItem
                     onLoaded: {
                         item.imgSource = "/img/open.png"
+                    }
+
+                    Connections{
+                        target: openIcon.item
+                        onIconClicked: {
+                            if (plotStatus === 0)
+                                fileOpenFileDialog.open()
+                        }
                     }
                 }
             }
@@ -292,7 +336,9 @@ Rectangle{
                     Connections{
                         target: deviceStartIcon.item
                         onIconClicked: {
-                            if (plotPanel.gatherInfor === null){
+                            if (fileMode && plotStatus === 0) return
+
+                            if (!fileMode && plotPanel.gatherInfor === null){
                                 inforIcon.item.iconClicked()
                                 return
                             }
@@ -315,10 +361,12 @@ Rectangle{
                         onIconClicked: {
                             plotPanel.plotStatus = 0
                             deviceStartIcon.item.imgSource = "/img/start.png"
+                            plotPanel.storeGatherInfor = plotPanel.gatherInfor
                             plotPanel.gatherInfor = null
                             DeviceTestManager.finishDataTransfer()
                             plotBuffer = []
                             plotPanel.deviceStatus = 0
+                            fileMode = false
                         }
                     }
                 }

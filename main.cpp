@@ -15,7 +15,6 @@ int main(int argc, char *argv[])
     QQmlApplicationEngine engine;
 
     engine.rootContext()->setContextProperty("DeviceTestManager", DeviceTest::getInstance());
-    engine.rootContext()->setContextProperty("RawDataHandleManager", RawDataHandleManager::getInstance());
     engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
 
     return app.exec();

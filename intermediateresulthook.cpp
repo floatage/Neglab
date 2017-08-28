@@ -1,4 +1,5 @@
 #include "intermediateresulthook.h"
+#include "commonvariable.h"
 
 CSVWriter::CSVWriter()
 {
@@ -15,15 +16,16 @@ CSVWriter::CSVWriter(const QString &iFilename, int iChannelNum)
 CSVWriter::~CSVWriter()
 {
     clear();
+    if (writeThread) writeThread->deleteLater();
 }
 
 void CSVWriter::init(const QVariant &param)
 {
     QVariantList params = param.toList();
 
-    lock.lock();
-
     clear();
+
+    lock.lock();
     fileName = params[0].toString();
     file.setFileName(fileName);
     file.open(QIODevice::WriteOnly | QIODevice::Text);
@@ -37,15 +39,20 @@ void CSVWriter::init(const QVariant &param)
 
     out << "C,";
     for (int begin = 0; begin < channelNum; ++begin){
-        out << "T" << begin << ',';
+        out << "T" << begin;
+        if (begin != channelNum-1){
+            out << ',';
+        }
     }
-    out << endl;
+    out << CommonVariable::newlineStr;
     out.flush();
 }
 
 void CSVWriter::clear()
 {
+    lock.lock();
     if (file.isOpen()) file.close();
+    lock.unlock();
 }
 
 void CSVWriter::bind(QThread *thread)
@@ -54,7 +61,6 @@ void CSVWriter::bind(QThread *thread)
 
     writeThread = thread;
     this->moveToThread(writeThread);
-    connect(writeThread, &QThread::finished, this, &QObject::deleteLater);
     connect(this, &CSVWriter::hasDataCanWrite, this, &CSVWriter::writeData);
     writeThread->start();
 }
@@ -79,12 +85,15 @@ void CSVWriter::writeData()
         QVariantList dataPack = dataList.at(begin).toList();
         for (int channelCounter = 0, validChannleNum = dataPack.size(); channelCounter < validChannleNum; ++channelCounter)
         {
-           out << dataPack.at(channelCounter).toInt() << ',';
+           out << dataPack.at(channelCounter).toFloat();
+           if (channelCounter != validChannleNum-1){
+               out << ',';
+           }
         }
+        out << CommonVariable::newlineStr;
     }
-    out << '\n';
-    out.flush();
 
+    out.flush();
     dataQueue.pop_front();
     if (!dataQueue.isEmpty())
     {

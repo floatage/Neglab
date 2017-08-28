@@ -41,7 +41,7 @@ Rectangle{
 
                         TextRow{
                             rowText: "存储路径："
-                            tPlaceholderText: "/C/test";
+                            tPlaceholderText: "./";
                             tWidth: 152
                             hasButton: true
                             bButtonText: "选择"
