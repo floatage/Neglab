@@ -8,6 +8,8 @@
 #include <QMutex>
 #include <QTextStream>
 
+
+//绘图数据源接口
 class QThread;
 class DeviceTest;
 class PlotDataSource: public QObject

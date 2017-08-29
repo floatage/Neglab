@@ -8,6 +8,8 @@ Window {
     flags: Qt.FramelessWindowHint | Qt.Window
     visible: true
 
+    signal plotControlDataUpdated(var controlDataName, var controlDataValue)
+
     property color textColor: "#333"
     property string textFontFamily: "宋体"
     property int textFontPixelSize: 12
@@ -28,9 +30,17 @@ Window {
 
     PlotControlPanel{
         id: plotControlPanel
+        parentRef: mainWindow
         width: parent.width * 0.266
         height: parent.height - mainTitle.height
         anchors.top: mainTitle.bottom
+    }
+
+    Connections{
+        target: plotControlPanel
+        onPlotControlDataUpdated:{
+            plotControlDataUpdated(controlDataName, controlDataValue)
+        }
     }
 
     PlotPanel{

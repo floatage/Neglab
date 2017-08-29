@@ -14,6 +14,17 @@ Rectangle {
     property var prePoints: []
     property var curPoints: []
 
+    //每次绘图x坐标移动的距离
+    property real xOffset: 1
+    //屏幕清除的宽度
+    property real clearWidth: 50
+    //最大绘图次数，超出则刷新
+    property int flushTimes: 8
+    //绘图间隔，隔几次画一次
+    property int plotInterval: 1
+    //数据扩大倍数
+    property real plotDataMultiplier: 1.0
+
     Component{
         id: channelTitleLabel
 
@@ -129,20 +140,23 @@ Rectangle {
                 renderStrategy: Canvas.Threaded
                 property real maxX: width
                 property real curX: 0
-                property real xOffset: 3
-                property real clearWidth: 50
+                property int curPlotTimes: 0
+                property int curPlotIntervalCounter: 0
 
                 function clearCanvas(ctx, x) {
                     var clearStartX = x + 1
                     clearStartX = clearStartX >= maxX || x <= 0 ? 0 : clearStartX
-                    ctx.fillStyle="#FFF";
-                    ctx.beginPath();
-                    ctx.fillRect(clearStartX, 0, clearWidth, channelPlotCanvas.height);
-                    ctx.closePath();
+                    ctx.fillStyle="#FFF"
+                    ctx.beginPath()
+                    ctx.fillRect(clearStartX, 0, clearWidth, channelPlotCanvas.height)
+                    ctx.closePath()
                 }
 
                 onPaint: {
                     if (curPoints === [] || prePoints === []) return
+
+                    curPlotIntervalCounter = ++curPlotIntervalCounter % plotInterval
+                    if (curPlotIntervalCounter !== 0) return
 
                     var context = getContext('2d')
                     if (curX <= 0){
@@ -153,6 +167,7 @@ Rectangle {
 
                     curX = curX >= maxX ? 0 : curX
 
+                    //绘制控制信号
                     if (curPoints[0] !== 0){
                         context.strokeStyle = "#0F0"
                         context.moveTo(curX-xOffset, 0)
@@ -166,15 +181,21 @@ Rectangle {
                         if (begin >= curPoints.length) break
 
                         if (channelStateList[begin-1]){
-                            context.moveTo(curX-xOffset, prePoints[begin] + channelBaselineList[begin-1])
-                            context.lineTo(curX, curPoints[begin] + channelBaselineList[begin-1])
+                            context.moveTo(curX-xOffset, (prePoints[begin] * plotDataMultiplier) + channelBaselineList[begin-1])
+                            context.lineTo(curX, (curPoints[begin] * plotDataMultiplier) + channelBaselineList[begin-1])
                         }
                     }
 
                     context.stroke()
                     clearCanvas(context, curX)
                     curX += xOffset
-                    markDirty()
+
+                    //定次刷新
+                    ++curPlotTimes
+                    if (curPlotTimes >= flushTimes ) {
+                        curPlotTimes = 0
+                        markDirty()
+                    }
                 }
             }
         }

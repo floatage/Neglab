@@ -12,6 +12,7 @@ Rectangle{
     property var floatInstance: null
     property Component plotAreaComponent: null
     property var plotAreaInstance: null
+    property var plotControlData: null
 
     //0: ready  1: ploting  2: pause  3: finished
     property int plotStatus: 0
@@ -25,6 +26,26 @@ Rectangle{
 
     signal channelDataUpdate(var newData)
 
+    Component.onCompleted: {
+        plotControlData = {
+            plotMode: "分离",
+            timeInterval: 1,
+            eegMin: 0.0,
+            eegMax: 0.0,
+            lowpassFilter: 0.0,
+            highpassFilter: 0.0,
+            sampleRate: 100
+        }
+    }
+
+    Connections{
+        target: parentRef
+        onPlotControlDataUpdated: {
+            plotControlData.controlDataName = controlDataValue
+            console.log(controlDataName + " : " + plotControlData.controlDataName)
+        }
+    }
+
     function gatherMainProcess(){
         if (plotPanel.plotStatus === 0){
             if (plotPanel.deviceStatus === 0){
@@ -35,7 +56,7 @@ Rectangle{
             else if(plotPanel.deviceStatus === 3){
                 plotPanel.plotStatus = 1
                 deviceStartIcon.item.imgSource = "/img/pause.png"
-                DeviceTestManager.startDataTransfer()
+                DeviceTestManager.startDataTransfer(plotControlData)
             }
         }
         else if(plotPanel.plotStatus === 1){
@@ -48,7 +69,7 @@ Rectangle{
             plotPanel.plotStatus = 1
             deviceStartIcon.item.imgSource = "/img/pause.png"
             plotPanel.deviceStatus = 3
-            DeviceTestManager.startDataTransfer()
+            DeviceTestManager.startDataTransfer(plotControlData)
         }
     }
 
@@ -86,6 +107,7 @@ Rectangle{
                 channelDataUpdate(plotData[begin])
             }
 
+//此处为采用定时器绘图的代码，即带缓冲的绘图
 //            if (plotBuffer.length <= 0)
 //            {
 //                plotBuffer = plotData
@@ -99,6 +121,19 @@ Rectangle{
 //            }
 
 //            if (!plotTimer.running) plotTimer.restart()
+        }
+    }
+
+    Timer{
+        id: plotTimer
+        interval: 10;
+        running: false;
+        repeat: true
+        onTriggered:{
+            if (plotBuffer.length > 0)
+                channelDataUpdate(plotBuffer.shift())
+            else
+                plotTimer.stop()
         }
     }
 
@@ -123,19 +158,6 @@ Rectangle{
                                                                             'anchors.top': plotAreaToolBar.bottom,
                                                                             'anchors.topMargin': (plotPanel.height - plotAreaToolBar.height) * 0.02
                                                                         });
-        }
-    }
-
-    Timer{
-        id: plotTimer
-        interval: 10;
-        running: false;
-        repeat: true
-        onTriggered:{
-            if (plotBuffer.length > 0)
-                channelDataUpdate(plotBuffer.shift())
-            else
-                plotTimer.stop()
         }
     }
 

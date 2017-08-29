@@ -203,10 +203,12 @@ bool DeviceTest::disconnectPort(void)
     return true;
 }
 
-int DeviceTest::startDataTransfer()
+int DeviceTest::startDataTransfer(const QVariant& controlData)
 {
-    qDebug() << "start data transfer";
+    qDebug() << "start data transfer" << controlData.toMap();
+    buildHandleComponent();
     deviceStatus = DATATRANSFER;
+    dataHandleControlData = controlData;
     if (dataSource) dataSource->start();
     return 1;
 }
@@ -258,7 +260,7 @@ int DeviceTest::judgeDeviceChannelNum(const QByteArray& data)
 void DeviceTest::dataTransferMainProcess(const QByteArray& buffer)
 {
     //为了防止信号丢失的情况，达到一定次数重新激活循环
-    static int reActiveNumer = 20;
+    static int reActiveNumer = CommonVariable::dataHandleLoopReactiveTimes;
     static bool loopIsRun = false;
 
     if (deviceChannelNum == -1){
@@ -278,7 +280,7 @@ void DeviceTest::dataTransferMainProcess(const QByteArray& buffer)
 
     if (--reActiveNumer){
         loopIsRun = false;
-        reActiveNumer = 20;
+        reActiveNumer = CommonVariable::dataHandleLoopReactiveTimes;
     }
 
     if (!loopIsRun){
@@ -305,12 +307,18 @@ void DeviceTest::handlePlotDataGenerated(QVariant plotData)
     emit plotDataTransferFinished();
 }
 
+//构建处理组件
 void DeviceTest::buildHandleComponent()
 {
+    int smapleRate = 100;
+
+    QVariantMap bulidParams = dataHandleControlData.toMap();
+    if (bulidParams.contains("sampleRate")) smapleRate = bulidParams["sampleRate"].toInt();
+
     rawDataHandleMgr = RawDataHandleManager::getInstance();
     rawDataHandleMgr->clear();
     rawDataHandleMgr->addHandler(new DataExtracter_RemainHandle(deviceChannelNum));
-    rawDataHandleMgr->addHandler(new DataSampler_DownSampler(100));
+    rawDataHandleMgr->addHandler(new DataSampler_DownSampler(smapleRate));
 
     int historyLen = CommonVariable::historyDataBufferLen;
     rawDataHandleMgr->addHandler(new DataFilter_IIR(historyLen, deviceChannelNum, QVector<float>(historyLen,1.0f), QVector<float>(historyLen,1.0f)));

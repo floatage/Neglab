@@ -88,7 +88,7 @@ void PlotDataSource_CSV::run()
             result.append(QVariant(pack));
         }
 
-        emit PlotDataGenerated(result);
+        if (!result.isEmpty()) emit PlotDataGenerated(result);
     }
     lock.unlock();
 }

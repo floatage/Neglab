@@ -4,20 +4,31 @@
 #include <QFileInfo>
 #include <QRegExp>
 
+//非数据采集模式时设备缓冲区大小(字符)，超出此大小则处理数据并清空
 int CommonVariable::openModeBufferMaxSize = 60;
 
+//数据采集模式时设备缓冲区大小(字节)，超出则处理
 int CommonVariable::dataTransferModeBufferMaxSize = 60;
 
+//为防止数据处理循环信号丢失，采集到一定次数的数据则手动激活循环
+int CommonVariable::dataHandleLoopReactiveTimes = 20;
+
+//向串口发送的搜索采集设备的指令
 QString CommonVariable::searchDeviceCommandStr("AT:GS");
 
+//向串口发送的连接指定编号采集设备的指令
 QString CommonVariable::connectDeviceCommandStr("AT:GI-#");
 
+//文件中换行符
 QString CommonVariable::newlineStr("\n");
 
+//临时文件的存储路径，若路径不存在不会创建，即会写入失败
 QString CommonVariable::tmpFileDefaultPath("./");
 
+//系统认为是数据文件的文件名的规则
 QString CommonVariable::dataFilePattern(".*\.(csv|txt)");
 
+//数据包大小和通道设备数的映射关系，主要用作判断设备通道数
 std::map<int, int> CommonVariable::channelNumMap{
     std::pair<int, int>(18, 2),
     std::pair<int, int>(27, 8),
@@ -25,10 +36,11 @@ std::map<int, int> CommonVariable::channelNumMap{
     std::pair<int, int>(99, 32)
 };
 
+//包标识，只能为两个字符，若大于则需修改判断设备通道函数和数据分包处理组件处的代码
 uchar CommonVariable::packHeadFlag1 = 0xaa;
 uchar CommonVariable::packHeadFlag2 = 0x55;
 
-//包总字节数  包数据部分字节数  包控制信息字节数  包单个数据的字节数
+//包总字节数  包数据部分字节数  包控制信息字节数  包单个数据的字节数， 主要用作如何对数据进行分包
 ChannelControlDict CommonVariable::channelControlDict{
     std::pair<int, std::vector<int>>(2, std::vector<int>{18, 16, 0, 2}),
     std::pair<int, std::vector<int>>(8, std::vector<int>{27, 25, 1, 3}),
@@ -36,6 +48,7 @@ ChannelControlDict CommonVariable::channelControlDict{
     std::pair<int, std::vector<int>>(32, std::vector<int>{99, 97, 1, 3})
 };
 
+//默认通道的mark信息,分包时对于无控制信息的会在包头添加默认的mark
 uchar CommonVariable::channelDefaultControlInfor = 0x00;
 
 int CommonVariable::historyDataBufferLen = 10;

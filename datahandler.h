@@ -9,6 +9,7 @@
 #include <QVariant>
 #include <QMutex>
 
+//数据分包处理组件，为了保证数据完整，分包会将上次剩下的数据添加到新数据开头，保证数据逻辑连续
 class DataExtracter_RemainHandle: public DataExtracter
 {
 public:
@@ -34,6 +35,7 @@ private:
     inline int byteToInt(uchar* head, int len);
 };
 
+//数据采样组件，为保证正常数据正常采样，若数据没有足够的数据进行采样则存储此次数据供下次采样
 class DataSampler_DownSampler: public DataSampler
 {
 public:
@@ -49,6 +51,7 @@ private:
     QVariantList validDataList;
 };
 
+//数据滤波组件
 class DataFilter_IIR: public DataFilter
 {
 public:

@@ -48,6 +48,7 @@ void DataExtracter_RemainHandle::init(const QVariant& param)
 //    return true;
 //}
 
+//将多字节拼成数字
 int DataExtracter_RemainHandle::byteToInt(uchar *head, int len)
 {
     int result = 0;
@@ -57,6 +58,7 @@ int DataExtracter_RemainHandle::byteToInt(uchar *head, int len)
     return result;
 }
 
+//创建单个数据包，此时内部数据为数字
 void DataExtracter_RemainHandle::createDataPack(uchar *pos, QVariantList& container)
 {
     QByteArray controlData(controlDataLen, CommonVariable::channelDefaultControlInfor);
@@ -77,6 +79,7 @@ void DataExtracter_RemainHandle::createDataPack(uchar *pos, QVariantList& contai
     }
 }
 
+//数据分包主过程，处理后数据为此类型的格式[[1,2], [1,2], [1,2]]
 void DataExtracter_RemainHandle::handle(QVariant& data)
 {
     if (data.isNull()) return;
@@ -128,6 +131,8 @@ DataSampler_DownSampler::DataSampler_DownSampler(int sampleRate)
 
 void DataSampler_DownSampler::init(const QVariant &param)
 {   
+    if (param.toInt() == 0) throw std::exception("invalid sample");
+
     lock.lock();
 
     fetchInterval = 100 / param.toInt();
@@ -138,6 +143,7 @@ void DataSampler_DownSampler::init(const QVariant &param)
     if (fetchInterval < 0 || fetchInterval > 100) throw std::exception("invalid sample");
 }
 
+//采样处理主流程
 void DataSampler_DownSampler::handle(QVariant& data)
 {
     if (data.isNull() || fetchInterval == 1) return;
@@ -203,7 +209,7 @@ void DataFilter_IIR::clear()
     lock.unlock();
 }
 
-//此处只做运行时的重新初始化，不做构造函数的初始化, 因为出现了多线程堆越界问题，只有此方法可解决
+//此处只做运行时的动态初始化，不做构造函数的初始化
 void DataFilter_IIR::init(const QVariant &param)
 {
     clear();

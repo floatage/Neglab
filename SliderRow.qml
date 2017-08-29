@@ -6,6 +6,7 @@ Item {
     width: rowContent.width
     height: rowContent.height
 
+    property alias rowValue: rowSlider.value
     property alias labelText: rowLabel.text
     property alias sliderText: rowSliderValue.text
     property alias rowWidth: rowContent.width

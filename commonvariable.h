@@ -15,6 +15,8 @@ public:
 
     static int dataTransferModeBufferMaxSize;
 
+    static int dataHandleLoopReactiveTimes;
+
     static QString searchDeviceCommandStr;
 
     static QString connectDeviceCommandStr;

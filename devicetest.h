@@ -30,7 +30,7 @@ public:
     Q_INVOKABLE bool connectDevice(const QVariant& deviceNum);
     Q_INVOKABLE bool disconnectPort(void);
 
-    Q_INVOKABLE int startDataTransfer();
+    Q_INVOKABLE int startDataTransfer(const QVariant& controlData);
     Q_INVOKABLE int pauseDataTransfer();
     Q_INVOKABLE int finishDataTransfer();
 
@@ -71,6 +71,7 @@ private:
 
     DeviceStatus deviceStatus;
     int deviceChannelNum;
+    QVariant dataHandleControlData;
     RawDataHandleManager* rawDataHandleMgr;
     QThread* dataHandleThread;
 

@@ -7,6 +7,8 @@ Item {
     width: rowContent.width
     height: rowContent.height
 
+    property alias rowValue: rowTextField.text
+    property alias rowIsChecked: rowContentCheckbox.isChecked
     property alias checkboxText: rowContentCheckbox.checkboxText
     property alias placeholderText: rowTextField.placeholderText
     property alias rowWidth: rowContent.width

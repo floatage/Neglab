@@ -9,6 +9,7 @@
 #include <QThread>
 #include <QMutex>
 
+//数据处理类接口
 class DataHandler
 {
 public:
@@ -75,6 +76,7 @@ public:
     ~DataCutter(){}
 };
 
+//数据处理中间结果的钩子接口
 class ExecuteObject: public QObject
 {
 public:
@@ -86,6 +88,7 @@ public:
     virtual ~ExecuteObject(){}
 };
 
+//数据处理管理类
 class RawDataHandleManager: public QObject
 {
     Q_OBJECT
