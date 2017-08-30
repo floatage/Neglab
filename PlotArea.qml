@@ -23,7 +23,8 @@ Rectangle {
     //绘图间隔，隔几次画一次
     property int plotInterval: 1
     //数据扩大倍数
-    property real plotDataMultiplier: 1.0
+    property real plotDataMultiplier: 100
+    property real plotDataOffset: 0
 
     Component{
         id: channelTitleLabel
@@ -181,8 +182,8 @@ Rectangle {
                         if (begin >= curPoints.length) break
 
                         if (channelStateList[begin-1]){
-                            context.moveTo(curX-xOffset, (prePoints[begin] * plotDataMultiplier) + channelBaselineList[begin-1])
-                            context.lineTo(curX, (curPoints[begin] * plotDataMultiplier) + channelBaselineList[begin-1])
+                            context.moveTo(curX-xOffset, (prePoints[begin] * plotDataMultiplier) + channelBaselineList[begin-1] + plotDataOffset)
+                            context.lineTo(curX, (curPoints[begin] * plotDataMultiplier) + channelBaselineList[begin-1] + plotDataOffset)
                         }
                     }
 

@@ -49,12 +49,15 @@ void DataExtracter_RemainHandle::init(const QVariant& param)
 //}
 
 //将多字节拼成数字
-int DataExtracter_RemainHandle::byteToInt(uchar *head, int len)
+uint DataExtracter_RemainHandle::byteToInt(uchar *head, int len)
 {
-    int result = 0;
-    for (int begin = 0; begin < len; ++begin){
-        result = (result << 8) & *(head+begin);
+    uint result = 0;
+    for (int begin = 0; begin < len; ++begin)
+    {
+        result = result << 8;
+        result = result + uint(*(head+begin));
     }
+
     return result;
 }
 
@@ -62,15 +65,18 @@ int DataExtracter_RemainHandle::byteToInt(uchar *head, int len)
 void DataExtracter_RemainHandle::createDataPack(uchar *pos, QVariantList& container)
 {
     QByteArray controlData(controlDataLen, CommonVariable::channelDefaultControlInfor);
-    std::memcpy(controlData.data(), pos, controlDataLen);
-    pos += controlDataLen;
+    if (controlDataLen != 0){
+        std::memcpy((uchar*)controlData.data(), pos, controlDataLen);
+        pos += controlDataLen;
+    }
 
-    for (int begin = 0, end = dataLen / channelNum; begin != end; ++begin)
+    for (int begin = 0, end = dataLen / (channelNum*channelDataLen); begin < end; ++begin)
     {
         QVariantList dataPack;
         for (int channelCounter = 0; channelCounter < channelNum; ++channelCounter)
         {
-            dataPack.append(byteToInt(pos, channelDataLen));
+            uint value = byteToInt(pos, channelDataLen);
+            dataPack.append(value);
             pos += channelDataLen;
         }
 
@@ -91,25 +97,26 @@ void DataExtracter_RemainHandle::handle(QVariant& data)
     QByteArray rawData(remainData);
     rawData.append(data.toByteArray());
 
-    int remainDataSize = 0;
     uchar* posPtr = (uchar*)rawData.data();
-    for (int begin = 0, end = rawData.size() - packLen - remainDataSize; begin < end; ++begin)
+    for (int begin = 0, end = rawData.size() - packLen; begin < end;)
     {
-        if (*(posPtr+packLen) == CommonVariable::packHeadFlag1 && *(posPtr+packLen+1) == CommonVariable::packHeadFlag2)
+        if (*(posPtr+packLen-2) == CommonVariable::packHeadFlag1 && *(posPtr+packLen-1) == CommonVariable::packHeadFlag2)
         {
             if (isFirst){
                 int remainDataSize = (rawData.size()-begin) % packLen;
                 remainData.clear();
-                remainData.setRawData(rawData.data() + rawData.size() - remainDataSize, remainDataSize);
+                remainData = rawData.right(remainDataSize);
                 isFirst = false;
-                end = rawData.size() - packLen - remainDataSize;
             }
 
             createDataPack(posPtr, result);
+
+            begin += packLen;
             posPtr += packLen;
         }
         else
         {
+            begin += 1;
             posPtr += 1;
         }
     }

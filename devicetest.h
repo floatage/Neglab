@@ -74,6 +74,7 @@ private:
     QVariant dataHandleControlData;
     RawDataHandleManager* rawDataHandleMgr;
     QThread* dataHandleThread;
+    bool handleLoopIsRun;
 
     PlotDataSource* dataSource;
 

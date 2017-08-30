@@ -15,7 +15,7 @@
 DeviceTest* DeviceTest::instance = nullptr;
 DeviceTest::DeviceTest(QObject *parent)
     : QObject(parent), serialPort(), deviceStatus(CLOSED), deviceChannelNum(-1), rawDataHandleMgr(NULL), dataHandleThread(NULL),
-      dataSource(NULL)
+      dataSource(NULL), handleLoopIsRun(false)
 {
     initDataHandleThread();
 
@@ -206,9 +206,9 @@ bool DeviceTest::disconnectPort(void)
 int DeviceTest::startDataTransfer(const QVariant& controlData)
 {
     qDebug() << "start data transfer" << controlData.toMap();
-    buildHandleComponent();
     deviceStatus = DATATRANSFER;
     dataHandleControlData = controlData;
+    handleLoopIsRun = false;
     if (dataSource) dataSource->start();
     return 1;
 }
@@ -261,12 +261,11 @@ void DeviceTest::dataTransferMainProcess(const QByteArray& buffer)
 {
     //为了防止信号丢失的情况，达到一定次数重新激活循环
     static int reActiveNumer = CommonVariable::dataHandleLoopReactiveTimes;
-    static bool loopIsRun = false;
 
     if (deviceChannelNum == -1){
         deviceChannelNum = judgeDeviceChannelNum(buffer);
         if (deviceChannelNum != -1){
-            loopIsRun = false;
+            handleLoopIsRun = false;
             buildHandleComponent();
 
             emit deviceJudgeFinished();
@@ -279,12 +278,12 @@ void DeviceTest::dataTransferMainProcess(const QByteArray& buffer)
     byteBufferQueue.push_back(QVariant(byteBuffer));
 
     if (--reActiveNumer){
-        loopIsRun = false;
+        handleLoopIsRun = false;
         reActiveNumer = CommonVariable::dataHandleLoopReactiveTimes;
     }
 
-    if (!loopIsRun){
-        loopIsRun = true;
+    if (!handleLoopIsRun){
+        handleLoopIsRun = true;
         emit deviceByteBufferFilled(byteBufferQueue.front());
         byteBufferQueue.pop_front();
     }
@@ -313,7 +312,9 @@ void DeviceTest::buildHandleComponent()
     int smapleRate = 100;
 
     QVariantMap bulidParams = dataHandleControlData.toMap();
-    if (bulidParams.contains("sampleRate")) smapleRate = bulidParams["sampleRate"].toInt();
+    if (bulidParams.contains("sampleRate")){
+        smapleRate = bulidParams["sampleRate"].toInt();
+    }
 
     rawDataHandleMgr = RawDataHandleManager::getInstance();
     rawDataHandleMgr->clear();
@@ -322,7 +323,7 @@ void DeviceTest::buildHandleComponent()
 
     int historyLen = CommonVariable::historyDataBufferLen;
     rawDataHandleMgr->addHandler(new DataFilter_IIR(historyLen, deviceChannelNum, QVector<float>(historyLen,1.0f), QVector<float>(historyLen,1.0f)));
-    rawDataHandleMgr->addIntermediateResultHook(4000, 1, new CSVWriter("filterBefor.csv", deviceChannelNum));
+    rawDataHandleMgr->addIntermediateResultHook(1000, 1, new CSVWriter("filterBefor.csv", deviceChannelNum));
     rawDataHandleMgr->addIntermediateResultHook(10000, 1, new CSVWriter("filterAfter.csv", deviceChannelNum));
 
 //初始化处理组件的保险方法

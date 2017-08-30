@@ -31,8 +31,8 @@ private:
 
 //    const QVector<uchar> headFlag;
 //    inline bool isArriveHeadFlag(uchar* pos);
-    inline void createDataPack(uchar* pos, QVariantList& container);
-    inline int byteToInt(uchar* head, int len);
+    void createDataPack(uchar* pos, QVariantList& container);
+    uint byteToInt(uchar* head, int len);
 };
 
 //数据采样组件，为保证正常数据正常采样，若数据没有足够的数据进行采样则存储此次数据供下次采样
